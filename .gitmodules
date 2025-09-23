@@ -1,0 +1,3 @@
+[submodule "TASTE-SAMV71-RTEMS-Runtime"]
+	path = TASTE-SAMV71-RTEMS-Runtime
+	url = https://github.com/n7space/TASTE-SAMV71-RTEMS-Runtime.git
