@@ -3,8 +3,7 @@
 #include <assert.h>
 
 #include <Escaper.h>
-
-
+#include <EscaperInternal.h>
 
 static inline void
 SamV71RtemsSerialInit_uart_register(samv71_rtems_serial_private_data *self,
@@ -73,7 +72,7 @@ SamV71RtemsSerialInit_uart_baudrate(samv71_rtems_serial_private_data *self,
     self->m_hal_uart_config.baudrate = 38400;
     break;
   case Serial_SamV71_Rtems_Baudrate_T_b57600:
-    sel->m_hal_uart_config.baudrate = 57600;
+    self->m_hal_uart_config.baudrate = 57600;
     break;
   case Serial_SamV71_Rtems_Baudrate_T_b115200:
     self->m_hal_uart_config.baudrate = 115200;
@@ -157,7 +156,7 @@ SamV71RtemsSerialInit_tx_handler(samv71_rtems_serial_private_data *const self) {
 
 
 
-void SamV71RtemsSerialInit(
+void Samv71RtemsSerialInit(
     void *private_data, const enum SystemBus bus_id,
     const enum SystemDevice device_id,
     const Serial_SamV71_Rtems_Conf_T *const device_configuration,
@@ -199,7 +198,7 @@ static inline void SamV71RtemsSerialInterrupt_rx_disable(
 }
 
 
-void SamV71RtemsSerialPoll(void *private_data) {
+void Samv71RtemsSerialPoll(void *private_data) {
    samv71_rtems_serial_private_data*self =
      (samv71_rtems_serial_private_data *)private_data;
     size_t length = 0;
@@ -207,7 +206,7 @@ void SamV71RtemsSerialPoll(void *private_data) {
   Escaper_start_decoder(&self->m_escaper);
   rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_WAIT);
   Hal_uart_read(&self->m_hal_uart, self->m_fifo_memory_block,
-                Serial_SAMV71_RECV_BUFFER_SIZE, self->m_uart_rx_handler);
+                Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE, self->m_uart_rx_handler);
   while (true) {
     /// Wait for data to arrive. Semaphore will be given
     rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_WAIT);
@@ -226,7 +225,7 @@ void SamV71RtemsSerialPoll(void *private_data) {
 
 }
 
-void SamV71RtemsSerialSend(void *private_data, const uint8_t *const data,
+void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
                            const size_t length) {
   samv71_rtems_serial_private_data *self =
     (samv71_rtems_serial_private_data *)private_data;
@@ -242,4 +241,5 @@ void SamV71RtemsSerialSend(void *private_data, const uint8_t *const data,
                    (uint8_t *const)&self->m_encoded_packet_buffer, packetLength,
                    &self->m_uart_tx_handler);
 
+  }
 }

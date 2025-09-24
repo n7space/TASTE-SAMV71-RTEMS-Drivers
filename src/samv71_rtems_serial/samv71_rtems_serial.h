@@ -30,16 +30,17 @@ typedef struct {
   uint8_t m_decoded_packet_buffer[Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE];
   Escaper m_escaper;
   enum SystemBus m_ip_device_bus_id;
+  rtems_id m_task;
   /* TaskHandle_t m_task; */
   /* StaticTask_t m_task_buffer; */
   /* StackType_t m_task_stack_buffer[DRIVER_TASK_STACK_SIZE]; */
-  /* Uart_RxHandler m_uart_rx_handler; */
+  Uart_RxHandler m_uart_rx_handler;
   /* SemaphoreHandle_t m_rx_semaphore; */
   /* StaticSemaphore_t m_rx_semaphore_buffer; */
-  /* Uart_TxHandler m_uart_tx_handler; */
+  Uart_TxHandler m_uart_tx_handler;
   /* SemaphoreHandle_t m_tx_semaphore; */
   /* StaticSemaphore_t m_tx_semaphore_buffer; */
-  /* Uart_ErrorHandler m_uart_error_handler; */
+  Uart_ErrorHandler m_uart_error_handler;
   rtems_id m_rx_semaphore;
   rtems_id m_tx_semaphore;
 } samv71_rtems_serial_private_data;
