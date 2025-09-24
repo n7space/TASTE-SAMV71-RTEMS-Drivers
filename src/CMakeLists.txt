@@ -1,0 +1,2 @@
+add_subdirectory(samv71_rtems_serial)
+add_subdirectory(app)

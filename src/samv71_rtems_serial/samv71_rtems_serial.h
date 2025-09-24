@@ -3,25 +3,31 @@
 
 #include "samv71_rtems_serial_internal.h"
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <Broker.h>
 #include <Escaper.h>
 #include <rtems.h>
 
-#include <drivers_config.h>
+#include <Hal.h>
 
-#define Serial_CCSDS_SAMV71_FIFO_BUFFER_SIZE 256
-#define Serial_CCSDS_SAMV71_RECV_BUFFER_SIZE 256
-#define Serial_CCSDS_SAMV71_ENCODED_PACKET_MAX_SIZE 256
-#define Serial_CCSDS_SAMV71_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
+#include <drivers_config.h>
+#include <system_spec.h>
+
+#define Serial_SAMV71_RTEMS_FIFO_BUFFER_SIZE 256
+#define Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE 256
+#define Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE 256
+#define Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
 
 typedef struct {
-  Serial_RTEMS_SamV71_Device_T m_device;
+  Serial_SamV71_Rtems_Device_T m_device;
   Hal_Uart m_hal_uart;
   Hal_Uart_Config m_hal_uart_config;
-  uint8_t m_fifo_memory_block[Serial_CCSDS_SAMV71_FIFO_BUFFER_SIZE];
-  uint8_t m_recv_buffer[Serial_CCSDS_SAMV71_RECV_BUFFER_SIZE];
-  uint8_t m_encoded_packet_buffer[Serial_CCSDS_SAMV71_ENCODED_PACKET_MAX_SIZE];
-  uint8_t m_decoded_packet_buffer[Serial_CCSDS_SAMV71_DECODED_PACKET_MAX_SIZE];
+  uint8_t m_fifo_memory_block[Serial_SAMV71_RTEMS_FIFO_BUFFER_SIZE];
+  uint8_t m_recv_buffer[Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE];
+  uint8_t m_encoded_packet_buffer[Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE];
+  uint8_t m_decoded_packet_buffer[Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE];
   Escaper m_escaper;
   enum SystemBus m_ip_device_bus_id;
   /* TaskHandle_t m_task; */
@@ -34,15 +40,17 @@ typedef struct {
   /* SemaphoreHandle_t m_tx_semaphore; */
   /* StaticSemaphore_t m_tx_semaphore_buffer; */
   /* Uart_ErrorHandler m_uart_error_handler; */
-} samv71_serial_ccsds_private_data;
+  rtems_id m_rx_semaphore;
+  rtems_id m_tx_semaphore;
+} samv71_rtems_serial_private_data;
 
-void SamV71SerialCcsdsInit(
+void Samv71RtemsSerialInit(
     void *private_data, const enum SystemBus bus_id,
     const enum SystemDevice device_id,
-    const Serial_CCSDS_SamV71_Conf_T *const device_configuration,
-    const Serial_CCSDS_SamV71_Conf_T *const remote_device_configuration);
-void SamV71SerialCcsdsPoll(void *private_data);
-void SamV71SerialCcsdsSend(void *private_data, const uint8_t *const data,
+    const Serial_SamV71_Rtems_Conf_T *const device_configuration,
+    const Serial_SamV71_Rtems_Conf_T *const remote_device_configuration);
+void Samv71RtemsSerialPoll(void *private_data);
+void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
                            const size_t length);
 
 #endif
