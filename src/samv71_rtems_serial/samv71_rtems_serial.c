@@ -86,11 +86,6 @@ SamV71RtemsSerialInit_uart_baudrate(samv71_rtems_serial_private_data *self,
   }
 }
 
-
-
-
-
-
 static inline void SamV71RtemsSerialInit_uart_init(
     samv71_rtems_serial_private_data *const self,
     const Serial_SamV71_Rtems_Conf_T *const device_configuration) {
@@ -105,7 +100,8 @@ static inline void SamV71RtemsSerialInit_uart_init(
 static void UartRxCallback(void *private_data) {
    samv71_rtems_serial_private_data*self =
     (samv71_rtems_serial_private_data *)private_data;
-   rtems_semaphore_release(self->m_rx_semaphore); // TODO ISR
+   rtems_status_code releaseResult = rtems_semaphore_release(self->m_rx_semaphore); // TODO ISR
+  assert(releaseResult == RTEMS_SUCCESSFUL);
   //xSemaphoreGiveFromISR(self->m_rx_semaphore, NULL);
 }
 
@@ -119,11 +115,14 @@ SamV71RtemsSerialInit_rx_handler(samv71_rtems_serial_private_data *const self) {
   self->m_uart_rx_handler.targetCharacter = STOP_BYTE;
   self->m_uart_rx_handler.targetLength =
     Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
-  rtems_semaphore_create(rtems_build_name('d', 'r', 'v', 'r'),
+  rtems_status_code createResult = rtems_semaphore_create(rtems_build_name('d', 'r', 'v', 'r'),
 						 1,
-						 RTEMS_BINARY_SEMAPHORE,
-						 1,
-						 &self->m_rx_semaphore);
+						 RTEMS_SIMPLE_BINARY_SEMAPHORE,
+						 0,
+														 &self->m_rx_semaphore);
+  assert(createResult == RTEMS_SUCCESSFUL);
+  /* rtems_status_code releaseResult = rtems_semaphore_release(self->m_rx_semaphore); */
+  /* assert(releaseResult == RTEMS_SUCCESSFUL); */
   /* self->m_rx_semaphore = */
   /*     xSemaphoreCreateBinaryStatic(&self->m_rx_semaphore_buffer); */
   /* xSemaphoreGive(self->m_rx_semaphore); */
@@ -133,7 +132,8 @@ static ByteFifo *UartTxCallback(void *private_data) {
    samv71_rtems_serial_private_data*self =
       (samv71_rtems_serial_private_data *)private_data;
 
-   rtems_semaphore_release(self->m_tx_semaphore); // TODO isr
+   rtems_status_code releaseResult = rtems_semaphore_release(self->m_tx_semaphore); // TODO isr
+   assert(releaseResult == RTEMS_SUCCESSFUL);
   /* xSemaphoreGiveFromISR(self->m_tx_semaphore, NULL); */
   return NULL;
 }
@@ -143,11 +143,14 @@ static inline void
 SamV71RtemsSerialInit_tx_handler(samv71_rtems_serial_private_data *const self) {
   self->m_uart_tx_handler.callback = UartTxCallback;
   self->m_uart_tx_handler.arg = self;
-  rtems_semaphore_create(rtems_build_name('d', 'r', 'v', 't'),
+  rtems_status_code createResult = rtems_semaphore_create(rtems_build_name('d', 'r', 'v', 't'),
 						 1,
-						 RTEMS_BINARY_SEMAPHORE,
-						 1,
+						 RTEMS_SIMPLE_BINARY_SEMAPHORE,
+						 0,
 						 &self->m_tx_semaphore);
+  assert(createResult == RTEMS_SUCCESSFUL);
+  /* rtems_status_code releaseResult = rtems_semaphore_release(self->m_tx_semaphore); */
+  /* assert(releaseResult == RTEMS_SUCCESSFUL); */
   /* self->m_tx_semaphore = */
   /*     xSemaphoreCreateBinaryStatic(&self->m_tx_semaphore_buffer); */
   /* xSemaphoreGive(self->m_tx_semaphore); */
@@ -178,11 +181,23 @@ void Samv71RtemsSerialInit(
                self->m_decoded_packet_buffer,
                Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE);
 
-  // TODO, create rtems task
+      rtems_task_config taskConfig = {
+        .name =  rtems_build_name('p', 'o', 'l', 'l'),
+        .initial_priority =  1,
+        .storage_area = self->m_task_buffer,
+        .storage_size = Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE,
+        .maximum_thread_local_storage_size = Serial_SAMV71_RTEMS_UART_TLS_SIZE,
+        .storage_free = NULL,
+        .initial_modes = RTEMS_PREEMPT,
+        .attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
+      };
 
-  /* rtems_task_config */
+      const rtems_status_code taskConstructionResult = rtems_task_construct(&taskConfig,
+																			&self->m_task);
+	  assert(taskConstructionResult == RTEMS_SUCCESSFUL);
 
-  /* rtems_task_construct */
+	  const rtems_status_code taskStartStatus = rtems_task_start(self->m_task, &Samv71RtemsSerialPoll, self);
+
 }
 
 static inline void SamV71RtemsSerialInterrupt_rx_enable(
@@ -204,12 +219,14 @@ void Samv71RtemsSerialPoll(void *private_data) {
     size_t length = 0;
 
   Escaper_start_decoder(&self->m_escaper);
-  rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_WAIT);
+  rtems_status_code obtainResult = rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+  assert(obtainResult == RTEMS_SUCCESSFUL);
   Hal_uart_read(&self->m_hal_uart, self->m_fifo_memory_block,
                 Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE, self->m_uart_rx_handler);
   while (true) {
     /// Wait for data to arrive. Semaphore will be given
-    rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_WAIT);
+    obtainResult = rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+	assert(obtainResult == RTEMS_SUCCESSFUL);
 
     length = ByteFifo_getCount(&self->m_hal_uart.rxFifo);
 
@@ -236,7 +253,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
   while (index < length) {
     packetLength =
         Escaper_encode_packet(&self->m_escaper, data, length, &index);
-    rtems_semaphore_obtain(self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_WAIT);
+    rtems_semaphore_obtain(self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
     Hal_uart_write(&self->m_hal_uart,
                    (uint8_t *const)&self->m_encoded_packet_buffer, packetLength,
                    &self->m_uart_tx_handler);
