@@ -100,7 +100,7 @@ static inline void SamV71RtemsSerialInit_uart_init(
 static void UartRxCallback(void *private_data) {
    samv71_rtems_serial_private_data*self =
     (samv71_rtems_serial_private_data *)private_data;
-   rtems_status_code releaseResult = rtems_semaphore_release(self->m_rx_semaphore); // TODO ISR
+   rtems_status_code releaseResult = rtems_semaphore_release(self->m_rx_semaphore);
   assert(releaseResult == RTEMS_SUCCESSFUL);
   //xSemaphoreGiveFromISR(self->m_rx_semaphore, NULL);
 }
@@ -132,7 +132,7 @@ static ByteFifo *UartTxCallback(void *private_data) {
    samv71_rtems_serial_private_data*self =
       (samv71_rtems_serial_private_data *)private_data;
 
-   rtems_status_code releaseResult = rtems_semaphore_release(self->m_tx_semaphore); // TODO isr
+   rtems_status_code releaseResult = rtems_semaphore_release(self->m_tx_semaphore);
    assert(releaseResult == RTEMS_SUCCESSFUL);
   /* xSemaphoreGiveFromISR(self->m_tx_semaphore, NULL); */
   return NULL;
@@ -257,6 +257,5 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
     Hal_uart_write(&self->m_hal_uart,
                    (uint8_t *const)&self->m_encoded_packet_buffer, packetLength,
                    &self->m_uart_tx_handler);
-
   }
 }
