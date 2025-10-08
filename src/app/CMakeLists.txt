@@ -9,7 +9,7 @@ target_include_directories(Samv71App
 target_link_libraries(Samv71App
     PRIVATE     common_build_options
                 SAMV71::Runtime::Hal
-                TASTE::SamV71SerialCcsds
+                TASTE::SamV71RtemsSerial
                 TASTE::Broker
                 SAMV71::Runtime::BrokerLock)
 

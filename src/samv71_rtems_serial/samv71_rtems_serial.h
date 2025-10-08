@@ -21,8 +21,12 @@
 #define Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
 
 #define Serial_SAMV71_RTEMS_UART_TLS_SIZE 16384
-#define Serial_SAMV71_RTEMS_STACK_SIZE (1024 > RTEMS_MINIMUM_STACK_SIZE ?  1024 : RTEMS_MINIMUM_STACK_SIZE)
-#define Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE (RTEMS_TASK_STORAGE_SIZE(Serial_SAMV71_RTEMS_STACK_SIZE + Serial_SAMV71_RTEMS_UART_TLS_SIZE, RTEMS_FLOATING_POINT))
+#define Serial_SAMV71_RTEMS_STACK_SIZE                                         \
+  (1024 > RTEMS_MINIMUM_STACK_SIZE ? 1024 : RTEMS_MINIMUM_STACK_SIZE)
+#define Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE                                   \
+  (RTEMS_TASK_STORAGE_SIZE(Serial_SAMV71_RTEMS_STACK_SIZE +                    \
+                               Serial_SAMV71_RTEMS_UART_TLS_SIZE,              \
+                           RTEMS_FLOATING_POINT))
 
 typedef struct {
   Serial_SamV71_Rtems_Device_T m_device;
@@ -36,7 +40,8 @@ typedef struct {
   enum SystemBus m_ip_device_bus_id;
   rtems_id m_task;
   /* TaskHandle_t m_task; */
-  RTEMS_ALIGNED( RTEMS_TASK_STORAGE_ALIGNMENT ) char m_task_buffer[Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE];
+  RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
+  char m_task_buffer[Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE];
   /* StackType_t m_task_stack_buffer[DRIVER_TASK_STACK_SIZE]; */
   Uart_RxHandler m_uart_rx_handler;
   /* SemaphoreHandle_t m_rx_semaphore; */

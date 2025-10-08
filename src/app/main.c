@@ -1,6 +1,6 @@
 #include <rtems.h>
 
-#include <samv71_serial_ccsds.h>
+#include <samv71_rtems_serial.h>
 
 #define RUNTIME_TASK_COUNT (1 + 3 + 0)
 #define RUNTIME_FUNCTION_COUNT (1 + 2 + (0 * 2))
