@@ -7,22 +7,26 @@
 
 #define PROVIDED_INTERFACE_COUNT (0 + 1 + 1 + 1)
 
-#define MAX_TLS_SIZE                                                           \
-  RTEMS_ALIGN_UP(((64 > (8 * PROVIDED_INTERFACE_COUNT))                        \
-                      ? 64                                                     \
-                      : (8 * PROVIDED_INTERFACE_COUNT)),                       \
-                 RTEMS_TASK_STORAGE_ALIGNMENT)
+#define MAX_TLS_SIZE                                             \
+	RTEMS_ALIGN_UP(((64 > (8 * PROVIDED_INTERFACE_COUNT)) ?  \
+				64 :                             \
+				(8 * PROVIDED_INTERFACE_COUNT)), \
+		       RTEMS_TASK_STORAGE_ALIGNMENT)
 
 #define TASK_ATTRIBUTES RTEMS_DEFAULT_ATTRIBUTES
 
-#define TASK_STORAGE_SIZE                                                      \
-  RTEMS_TASK_STORAGE_SIZE(MAX_TLS_SIZE + RTEMS_MINIMUM_STACK_SIZE,             \
-                          TASK_ATTRIBUTES)
+#define TASK_STORAGE_SIZE                                                \
+	RTEMS_TASK_STORAGE_SIZE(MAX_TLS_SIZE + RTEMS_MINIMUM_STACK_SIZE, \
+				TASK_ATTRIBUTES)
 
-int main() { return 0; }
+int main()
+{
+	return 0;
+}
 
-rtems_task Init(rtems_task_argument argument) {
-  (void)rtems_task_delete(RTEMS_SELF);
+rtems_task Init(rtems_task_argument argument)
+{
+	(void)rtems_task_delete(RTEMS_SELF);
 }
 
 /* void abort() { rtems_fatal(RTEMS_FATAL_SOURCE_EXIT, 0); } */
@@ -51,8 +55,8 @@ rtems_task Init(rtems_task_argument argument) {
 
 #define CONFIGURE_MAXIMUM_TASKS RUNTIME_TASK_COUNT
 
-#define CONFIGURE_MINIMUM_TASKS_WITH_USER_PROVIDED_STORAGE                     \
-  CONFIGURE_MAXIMUM_TASKS
+#define CONFIGURE_MINIMUM_TASKS_WITH_USER_PROVIDED_STORAGE \
+	CONFIGURE_MAXIMUM_TASKS
 
 #define CONFIGURE_MAXIMUM_TIMERS RUNTIME_TASK_COUNT
 
