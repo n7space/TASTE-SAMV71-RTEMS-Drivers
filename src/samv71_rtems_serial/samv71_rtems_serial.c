@@ -110,7 +110,6 @@ static void UartRxCallback(void *private_data)
 	rtems_status_code releaseResult =
 		rtems_semaphore_release(self->m_rx_semaphore);
 	assert(releaseResult == RTEMS_SUCCESSFUL);
-	// xSemaphoreGiveFromISR(self->m_rx_semaphore, NULL);
 }
 
 static inline void
@@ -127,12 +126,6 @@ SamV71RtemsSerialInit_rx_handler(samv71_rtems_serial_private_data *const self)
 		rtems_build_name('d', 'r', 'v', 'r'), 1,
 		RTEMS_SIMPLE_BINARY_SEMAPHORE, 0, &self->m_rx_semaphore);
 	assert(createResult == RTEMS_SUCCESSFUL);
-	/* rtems_status_code releaseResult =
-   * rtems_semaphore_release(self->m_rx_semaphore); */
-	/* assert(releaseResult == RTEMS_SUCCESSFUL); */
-	/* self->m_rx_semaphore = */
-	/*     xSemaphoreCreateBinaryStatic(&self->m_rx_semaphore_buffer); */
-	/* xSemaphoreGive(self->m_rx_semaphore); */
 }
 
 static ByteFifo *UartTxCallback(void *private_data)
@@ -143,7 +136,6 @@ static ByteFifo *UartTxCallback(void *private_data)
 	rtems_status_code releaseResult =
 		rtems_semaphore_release(self->m_tx_semaphore);
 	assert(releaseResult == RTEMS_SUCCESSFUL);
-	/* xSemaphoreGiveFromISR(self->m_tx_semaphore, NULL); */
 	return NULL;
 }
 
@@ -156,12 +148,6 @@ SamV71RtemsSerialInit_tx_handler(samv71_rtems_serial_private_data *const self)
 		rtems_build_name('d', 'r', 'v', 't'), 1,
 		RTEMS_SIMPLE_BINARY_SEMAPHORE, 0, &self->m_tx_semaphore);
 	assert(createResult == RTEMS_SUCCESSFUL);
-	/* rtems_status_code releaseResult =
-   * rtems_semaphore_release(self->m_tx_semaphore); */
-	/* assert(releaseResult == RTEMS_SUCCESSFUL); */
-	/* self->m_tx_semaphore = */
-	/*     xSemaphoreCreateBinaryStatic(&self->m_tx_semaphore_buffer); */
-	/* xSemaphoreGive(self->m_tx_semaphore); */
 }
 
 void Samv71RtemsSerialInit(
@@ -203,8 +189,10 @@ void Samv71RtemsSerialInit(
 		rtems_task_construct(&taskConfig, &self->m_task);
 	assert(taskConstructionResult == RTEMS_SUCCESSFUL);
 
-	const rtems_status_code taskStartStatus =
-		rtems_task_start(self->m_task, &Samv71RtemsSerialPoll, self);
+	const rtems_status_code taskStartStatus = rtems_task_start(
+		self->m_task, (rtems_task_entry)&Samv71RtemsSerialPoll,
+		(rtems_task_argument)self);
+	assert(taskStartStatus == RTEMS_SUCCESSFUL);
 }
 
 static inline void SamV71RtemsSerialInterrupt_rx_enable(
