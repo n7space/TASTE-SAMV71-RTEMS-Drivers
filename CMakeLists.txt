@@ -40,6 +40,7 @@ set(CLANG_WARNINGS ${CLANG_WARNINGS}
                    -Wformat=2)
 
 set(GCC_WARNINGS ${CLANG_WARNINGS}
+                 -Wimplicit-function-declaration
                  -Wmisleading-indentation
                  -Wduplicated-cond
                  -Wduplicated-branches

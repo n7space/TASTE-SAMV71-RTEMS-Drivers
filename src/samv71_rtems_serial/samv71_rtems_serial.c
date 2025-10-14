@@ -33,33 +33,8 @@
 #include <Nvic/Nvic.h>
 #include <Pmc/Pmc.h>
 
-static InterruptCallback *interruptSubscription[Nvic_InterruptCount] = { NULL };
-
+// global variable required by xdmad.c
 rtems_id xdmad_lock;
-
-/// \brief Starts up, initializes and configures Uart and coresponding
-/// periferals \param [in] halUart Hal_Uart structure contains uart device
-/// descriptor and relevant fifos. \param [in] halUartConfig configuration
-/// structure
-void Hal_uart_init(Hal_Uart *const halUart, Hal_Uart_Config halUartConfig);
-
-/// \brief Asynchronously sends bytes over uart.
-/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
-/// relevant fifos. \param [in] buffer array containing bytes to send \param
-/// [in] length length of array of bytes \param [in] txHandler pointer to the
-/// handler called after successful array transmission
-void Hal_uart_write(Hal_Uart *const halUart, uint8_t *const buffer,
-		    const uint16_t length,
-		    const Uart_TxHandler *const txHandler);
-
-/// \brief Asynchronously receives bytes over uart.
-/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
-/// relevant fifos. \param [in] buffer array where received bytes will be
-/// storedx \param [in] length length of array of bytes \param [in] rxHandler
-/// handler called after successful array reception or after maching character
-/// was found
-void Hal_uart_read(Hal_Uart *const halUart, uint8_t *const buffer,
-		   const uint16_t length, const Uart_RxHandler rxHandler);
 
 static Uart *uart0handle;
 static Uart *uart1handle;
@@ -97,41 +72,31 @@ static Uart *uart4handle;
 
 void UART0_Handler(void)
 {
-	if (interruptSubscription[Nvic_Irq_Uart0] != NULL)
-		interruptSubscription[Nvic_Irq_Uart0](NULL);
-	else if (uart0handle != NULL)
+	if (uart0handle != NULL)
 		Uart_handleInterrupt(uart0handle);
 }
 
 void UART1_Handler(void)
 {
-	if (interruptSubscription[Nvic_Irq_Uart1] != NULL)
-		interruptSubscription[Nvic_Irq_Uart1](NULL);
-	else if (uart1handle != NULL)
+	if (uart1handle != NULL)
 		Uart_handleInterrupt(uart1handle);
 }
 
 void UART2_Handler(void)
 {
-	if (interruptSubscription[Nvic_Irq_Uart2] != NULL)
-		interruptSubscription[Nvic_Irq_Uart2](NULL);
-	else if (uart2handle != NULL)
+	if (uart2handle != NULL)
 		Uart_handleInterrupt(uart2handle);
 }
 
 void UART3_Handler(void)
 {
-	if (interruptSubscription[Nvic_Irq_Uart3] != NULL)
-		interruptSubscription[Nvic_Irq_Uart3](NULL);
-	else if (uart3handle != NULL)
+	if (uart3handle != NULL)
 		Uart_handleInterrupt(uart3handle);
 }
 
 void UART4_Handler(void)
 {
-	if (interruptSubscription[Nvic_Irq_Uart4] != NULL)
-		interruptSubscription[Nvic_Irq_Uart4](NULL);
-	else if (uart4handle != NULL)
+	if (uart4handle != NULL)
 		Uart_handleInterrupt(uart4handle);
 }
 
@@ -147,14 +112,54 @@ void XDMAC_Handler(void)
 	XDMAD_Handler(&xdmad);
 }
 
-void Hal_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
+static inline void Samv71RtemsSerial_Hal_uart_init_dma(void)
+{
+	Hal_EnablePeripheralClock(Pmc_PeripheralId_Xdmac);
+
+	Nvic_clearInterruptPending(Nvic_Irq_Xdmac);
+	Nvic_setInterruptPriority(Nvic_Irq_Xdmac,
+				  UART_XDMAC_INTERRUPT_PRIORITY);
+	Nvic_enableInterrupt(Nvic_Irq_Xdmac);
+
+	XDMAD_Initialize(&xdmad, XDMAD_NO_POLLING);
+}
+
+static void SamV71RtemsSerial_Init_global()
+{
+	static bool SamV71RtemsSerial_inited = false;
+	if (!SamV71RtemsSerial_inited) {
+		SamV71RtemsSerial_inited = true;
+		Init_setup_xdmad_lock();
+		Hal_InterruptSubscribe(58, "xdmac",
+				       (rtems_interrupt_handler)&XDMAC_Handler,
+				       NULL);
+		Hal_InterruptSubscribe(7, "uart0",
+				       (rtems_interrupt_handler)&UART0_Handler,
+				       NULL);
+		Hal_InterruptSubscribe(8, "uart1",
+				       (rtems_interrupt_handler)&UART1_Handler,
+				       NULL);
+		Hal_InterruptSubscribe(44, "uart2",
+				       (rtems_interrupt_handler)&UART2_Handler,
+				       NULL);
+		Hal_InterruptSubscribe(45, "uart3",
+				       (rtems_interrupt_handler)&UART3_Handler,
+				       NULL);
+		Hal_InterruptSubscribe(46, "uart4",
+				       (rtems_interrupt_handler)&UART4_Handler,
+				       NULL);
+		Samv71RtemsSerial_Hal_uart_init_dma();
+	}
+}
+
+void Samv71RtemsSerial_Hal_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 {
 	XDMAD_FreeChannel(&xdmad, xdmacChannel);
 	Uart_TxHandler *uartTxHandler = (Uart_TxHandler *)args;
 	uartTxHandler->callback(uartTxHandler->arg);
 }
 
-static inline void Hal_uart_print_uart_id(Uart_Id id)
+static inline void Samv71RtemsSerial_Hal_uart_print_uart_id(Uart_Id id)
 {
 	/* switch(id) { */
 	/*     case Uart_Id_0: */
@@ -175,11 +180,12 @@ static inline void Hal_uart_print_uart_id(Uart_Id id)
 	/* } */
 }
 
-static inline void Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
+static inline void
+Samv71RtemsSerial_Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
 	Hal_Uart *halUart = (Hal_Uart *)arg;
 
-	Hal_uart_print_uart_id(halUart->uart.id);
+	Samv71RtemsSerial_Hal_uart_print_uart_id(halUart->uart.id);
 	if (errorFlags.hasOverrunOccurred == true) {
 		/* Hal_console_usart_write(UART_READ_ERROR_OVERRUN_ERROR,
      * strlen(UART_READ_ERROR_OVERRUN_ERROR)); */
@@ -199,9 +205,10 @@ static inline void Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 	}
 }
 
-inline static void Hal_uart_init_uart0_pio(Pio_Port *const port,
-					   Pio_Port_Config *const pioConfigTx,
-					   Pio_Port_Config *const pioConfigRx)
+inline static void
+Samv71RtemsSerial_Hal_uart_init_uart0_pio(Pio_Port *const port,
+					  Pio_Port_Config *const pioConfigTx,
+					  Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_A;
 
@@ -212,9 +219,10 @@ inline static void Hal_uart_init_uart0_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralA;
 }
 
-inline static void Hal_uart_init_uart1_pio(Pio_Port *const port,
-					   Pio_Port_Config *const pioConfigTx,
-					   Pio_Port_Config *const pioConfigRx)
+inline static void
+Samv71RtemsSerial_Hal_uart_init_uart1_pio(Pio_Port *const port,
+					  Pio_Port_Config *const pioConfigTx,
+					  Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_A;
 
@@ -225,9 +233,10 @@ inline static void Hal_uart_init_uart1_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
 }
 
-inline static void Hal_uart_init_uart2_pio(Pio_Port *const port,
-					   Pio_Port_Config *const pioConfigTx,
-					   Pio_Port_Config *const pioConfigRx)
+inline static void
+Samv71RtemsSerial_Hal_uart_init_uart2_pio(Pio_Port *const port,
+					  Pio_Port_Config *const pioConfigTx,
+					  Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -238,9 +247,10 @@ inline static void Hal_uart_init_uart2_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
 }
 
-inline static void Hal_uart_init_uart3_pio(Pio_Port *const port,
-					   Pio_Port_Config *const pioConfigTx,
-					   Pio_Port_Config *const pioConfigRx)
+inline static void
+Samv71RtemsSerial_Hal_uart_init_uart3_pio(Pio_Port *const port,
+					  Pio_Port_Config *const pioConfigTx,
+					  Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -251,9 +261,10 @@ inline static void Hal_uart_init_uart3_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralA;
 }
 
-inline static void Hal_uart_init_uart4_pio(Pio_Port *const port,
-					   Pio_Port_Config *const pioConfigTx,
-					   Pio_Port_Config *const pioConfigRx)
+inline static void
+Samv71RtemsSerial_Hal_uart_init_uart4_pio(Pio_Port *const port,
+					  Pio_Port_Config *const pioConfigTx,
+					  Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -264,7 +275,8 @@ inline static void Hal_uart_init_uart4_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
 }
 
-static inline Pmc_PeripheralId Hal_get_periph_uart_id(Uart_Id id)
+static inline Pmc_PeripheralId
+Samv71RtemsSerial_Hal_get_periph_uart_id(Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -280,7 +292,8 @@ static inline Pmc_PeripheralId Hal_get_periph_uart_id(Uart_Id id)
 	}
 }
 
-static inline Pmc_PeripheralId Hal_get_periph_uart_pio_id(Uart_Id id)
+static inline Pmc_PeripheralId
+Samv71RtemsSerial_Hal_get_periph_uart_pio_id(Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -293,23 +306,7 @@ static inline Pmc_PeripheralId Hal_get_periph_uart_pio_id(Uart_Id id)
 	}
 }
 
-static inline Uart_Id Hal_get_nvic_uart_id(Uart_Id id)
-{
-	switch (id) {
-	case Uart_Id_0:
-		return Nvic_Irq_Uart0;
-	case Uart_Id_1:
-		return Nvic_Irq_Uart1;
-	case Uart_Id_2:
-		return Nvic_Irq_Uart2;
-	case Uart_Id_3:
-		return Nvic_Irq_Uart3;
-	case Uart_Id_4:
-		return Nvic_Irq_Uart4;
-	}
-}
-
-static inline void Hal_uart_init_pio(Uart_Id id)
+static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
 {
 	Pio_Port port;
 	Pio_Port_Config pioConfigTx = {.pinsConfig =
@@ -329,19 +326,24 @@ static inline void Hal_uart_init_pio(Uart_Id id)
 
 	switch (id) {
 	case Uart_Id_0:
-		Hal_uart_init_uart0_pio(&port, &pioConfigTx, &pioConfigRx);
+		Samv71RtemsSerial_Hal_uart_init_uart0_pio(&port, &pioConfigTx,
+							  &pioConfigRx);
 		break;
 	case Uart_Id_1:
-		Hal_uart_init_uart1_pio(&port, &pioConfigTx, &pioConfigRx);
+		Samv71RtemsSerial_Hal_uart_init_uart1_pio(&port, &pioConfigTx,
+							  &pioConfigRx);
 		break;
 	case Uart_Id_2:
-		Hal_uart_init_uart2_pio(&port, &pioConfigTx, &pioConfigRx);
+		Samv71RtemsSerial_Hal_uart_init_uart2_pio(&port, &pioConfigTx,
+							  &pioConfigRx);
 		break;
 	case Uart_Id_3:
-		Hal_uart_init_uart3_pio(&port, &pioConfigTx, &pioConfigRx);
+		Samv71RtemsSerial_Hal_uart_init_uart3_pio(&port, &pioConfigTx,
+							  &pioConfigRx);
 		break;
 	case Uart_Id_4:
-		Hal_uart_init_uart4_pio(&port, &pioConfigTx, &pioConfigRx);
+		Samv71RtemsSerial_Hal_uart_init_uart4_pio(&port, &pioConfigTx,
+							  &pioConfigRx);
 		break;
 	}
 	Pio pio;
@@ -351,21 +353,15 @@ static inline void Hal_uart_init_pio(Uart_Id id)
 	Pio_setPortConfig(&pio, &pioConfigRx, &errorCode);
 }
 
-inline static void Hal_uart_init_pmc(Uart_Id id)
+inline static void Samv71RtemsSerial_Hal_uart_init_pmc(Uart_Id id)
 {
-	Hal_EnablePeripheralClock(Hal_get_periph_uart_pio_id(id));
-	Hal_EnablePeripheralClock(Hal_get_periph_uart_id(id));
+	Hal_EnablePeripheralClock(
+		Samv71RtemsSerial_Hal_get_periph_uart_pio_id(id));
+	Hal_EnablePeripheralClock(Samv71RtemsSerial_Hal_get_periph_uart_id(id));
 }
 
-inline static void Hal_uart_init_nvic(Uart_Id id)
-{
-	Nvic_enableInterrupt(Hal_get_nvic_uart_id(id));
-	// TODO change to rtems API
-	Nvic_setInterruptPriority(Hal_get_nvic_uart_id(id),
-				  UART_INTERRUPT_PRIORITY);
-}
-
-inline static void Hal_uart_init_handle(Uart *uart, Uart_Id id)
+inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
+							  Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -386,50 +382,24 @@ inline static void Hal_uart_init_handle(Uart *uart, Uart_Id id)
 	}
 }
 
-static inline void Hal_uart_init_dma(void)
+/// \brief Starts up, initializes and configures Uart and coresponding
+/// periferals \param [in] halUart Hal_Uart structure contains uart device
+/// descriptor and relevant fifos. \param [in] halUartConfig configuration
+/// structure
+static void SamV71RtemsSerialInit_Hal_uart_init(Hal_Uart *const halUart,
+						Hal_Uart_Config halUartConfig)
 {
-	Hal_EnablePeripheralClock(Pmc_PeripheralId_Xdmac);
-
-	Nvic_clearInterruptPending(Nvic_Irq_Xdmac);
-	// TODO change to rtems API
-	Nvic_setInterruptPriority(Nvic_Irq_Xdmac,
-				  UART_XDMAC_INTERRUPT_PRIORITY);
-	Nvic_enableInterrupt(Nvic_Irq_Xdmac);
-
-	XDMAD_Initialize(&xdmad, XDMAD_NO_POLLING);
-}
-
-void Hal_subscribe_to_interrupt(Nvic_Irq irq, InterruptCallback callback)
-{
-	interruptSubscription[irq] = callback;
-}
-
-void Hal_uart_init(Hal_Uart *const halUart, Hal_Uart_Config halUartConfig)
-{
-	Hal_InterruptSubscribe(58, "xdmac",
-			       (rtems_interrupt_handler)&XDMAC_Handler, NULL);
-	Hal_InterruptSubscribe(7, "uart0",
-			       (rtems_interrupt_handler)&UART0_Handler, NULL);
-	Hal_InterruptSubscribe(8, "uart1",
-			       (rtems_interrupt_handler)&UART1_Handler, NULL);
-	Hal_InterruptSubscribe(44, "uart2",
-			       (rtems_interrupt_handler)&UART2_Handler, NULL);
-	Hal_InterruptSubscribe(45, "uart3",
-			       (rtems_interrupt_handler)&UART3_Handler, NULL);
-	Hal_InterruptSubscribe(46, "uart4",
-			       (rtems_interrupt_handler)&UART4_Handler, NULL);
-
-	Init_setup_xdmad_lock();
+	SamV71RtemsSerial_Init_global();
 
 	assert(halUartConfig.id <= Uart_Id_4);
 	assert((halUartConfig.parity <= Uart_Parity_Odd) ||
 	       (halUartConfig.parity == Uart_Parity_None));
 
 	// init uart
-	Hal_uart_init_pmc(halUartConfig.id);
-	Hal_uart_init_pio(halUartConfig.id);
-	Hal_uart_init_nvic(halUartConfig.id);
-	Hal_uart_init_handle(&halUart->uart, halUartConfig.id);
+	Samv71RtemsSerial_Hal_uart_init_pmc(halUartConfig.id);
+	Samv71RtemsSerial_Hal_uart_init_pio(halUartConfig.id);
+	Samv71RtemsSerial_Hal_uart_init_handle(&halUart->uart,
+					       halUartConfig.id);
 
 	Uart_init(halUartConfig.id, &halUart->uart);
 	Uart_startup(&halUart->uart);
@@ -442,11 +412,9 @@ void Hal_uart_init(Hal_Uart *const halUart, Hal_Uart_Config halUartConfig)
 			       .baudRateClkSrc = Uart_BaudRateClk_PeripheralCk,
 			       .baudRateClkFreq = Hal_GetMainClockFrequency() };
 	Uart_setConfig(&halUart->uart, &config);
-
-	Hal_uart_init_dma();
 }
 
-static inline void Hal_uart_write_init_xdmac_channel(
+static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 	Hal_Uart *const halUart, uint8_t *const buffer, const uint16_t length,
 	const Uart_TxHandler *const txHandler, uint32_t channelNumber)
 {
@@ -484,15 +452,20 @@ static inline void Hal_uart_write_init_xdmac_channel(
 		XDMAC_CIE_BIE | XDMAC_CIE_RBIE | XDMAC_CIE_WBIE |
 			XDMAC_CIE_ROIE);
 	assert(configureResult == XDMAD_OK);
-	eXdmadRC callbackResult = XDMAD_SetCallback(&xdmad, channelNumber,
-						    Hal_uart_xdmad_handler,
-						    (void *)txHandler);
+	eXdmadRC callbackResult = XDMAD_SetCallback(
+		&xdmad, channelNumber, Samv71RtemsSerial_Hal_uart_xdmad_handler,
+		(void *)txHandler);
 	assert(callbackResult == XDMAD_OK);
 }
 
-void Hal_uart_write(Hal_Uart *const halUart, uint8_t *const buffer,
-		    const uint16_t length,
-		    const Uart_TxHandler *const txHandler)
+/// \brief Asynchronously sends bytes over uart.
+/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
+/// relevant fifos. \param [in] buffer array containing bytes to send \param
+/// [in] length length of array of bytes \param [in] txHandler pointer to the
+/// handler called after successful array transmission
+static void SamV71RtemsSerialInit_Hal_uart_write(
+	Hal_Uart *const halUart, uint8_t *const buffer, const uint16_t length,
+	const Uart_TxHandler *const txHandler)
 {
 	uint32_t channelNumber =
 		XDMAD_AllocateChannel(&xdmad, XDMAD_TRANSFER_MEMORY,
@@ -512,11 +485,21 @@ void Hal_uart_write(Hal_Uart *const halUart, uint8_t *const buffer,
 	}
 }
 
-void Hal_uart_read(Hal_Uart *const halUart, uint8_t *const buffer,
-		   const uint16_t length, const Uart_RxHandler rxHandler)
+/// \brief Asynchronously receives bytes over uart.
+/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
+/// relevant fifos. \param [in] buffer array where received bytes will be
+/// storedx \param [in] length length of array of bytes \param [in] rxHandler
+/// handler called after successful array reception or after maching character
+/// was found
+static void SamV71RtemsSerial_Hal_uart_read(Hal_Uart *const halUart,
+					    uint8_t *const buffer,
+					    const uint16_t length,
+					    const Uart_RxHandler rxHandler)
 {
-	Uart_ErrorHandler errorHandler = { .callback = Hal_uart_error_handler,
-					   .arg = halUart };
+	Uart_ErrorHandler errorHandler = {
+		.callback = Samv71RtemsSerial_Hal_uart_error_handler,
+		.arg = halUart
+	};
 	ByteFifo_init(&halUart->rxFifo, buffer, length);
 	Uart_registerErrorHandler(&halUart->uart, errorHandler);
 	Uart_readAsync(&halUart->uart, &halUart->rxFifo, rxHandler);
@@ -617,7 +600,8 @@ static inline void SamV71RtemsSerialInit_uart_init(
 					  device_configuration->use_paritybit,
 					  device_configuration->parity);
 	SamV71RtemsSerialInit_uart_baudrate(self, device_configuration->speed);
-	Hal_uart_init(&self->m_hal_uart, self->m_hal_uart_config);
+	SamV71RtemsSerialInit_Hal_uart_init(&self->m_hal_uart,
+					    self->m_hal_uart_config);
 }
 
 static void UartRxCallback(void *private_data)
@@ -629,7 +613,7 @@ static void UartRxCallback(void *private_data)
 	assert(releaseResult == RTEMS_SUCCESSFUL);
 }
 
-static inline void
+static void
 SamV71RtemsSerialInit_rx_handler(samv71_rtems_serial_private_data *const self)
 {
 	self->m_uart_rx_handler.characterCallback = UartRxCallback;
@@ -653,7 +637,7 @@ static ByteFifo *UartTxCallback(void *private_data)
 	return NULL;
 }
 
-static inline void
+static void
 SamV71RtemsSerialInit_tx_handler(samv71_rtems_serial_private_data *const self)
 {
 	self->m_uart_tx_handler.callback = UartTxCallback;
@@ -730,9 +714,10 @@ void Samv71RtemsSerialPoll(void *private_data)
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
-	Hal_uart_read(&self->m_hal_uart, self->m_fifo_memory_block,
-		      Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE,
-		      self->m_uart_rx_handler);
+	SamV71RtemsSerial_Hal_uart_read(&self->m_hal_uart,
+					self->m_fifo_memory_block,
+					Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE,
+					self->m_uart_rx_handler);
 	while (true) {
 		/// Wait for data to arrive. Semaphore will be given
 		obtainResult = rtems_semaphore_obtain(
@@ -769,8 +754,9 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 						     length, &index);
 		rtems_semaphore_obtain(self->m_tx_semaphore, RTEMS_WAIT,
 				       RTEMS_NO_TIMEOUT);
-		Hal_uart_write(&self->m_hal_uart,
-			       (uint8_t *const)&self->m_encoded_packet_buffer,
-			       packetLength, &self->m_uart_tx_handler);
+		SamV71RtemsSerialInit_Hal_uart_write(
+			&self->m_hal_uart,
+			(uint8_t *const)&self->m_encoded_packet_buffer,
+			packetLength, &self->m_uart_tx_handler);
 	}
 }
