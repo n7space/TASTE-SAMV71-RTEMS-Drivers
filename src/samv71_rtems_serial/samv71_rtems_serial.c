@@ -467,13 +467,13 @@ static void SamV71RtemsSerialInit_Hal_uart_write(
 	Hal_Uart *const halUart, uint8_t *const buffer, const uint16_t length,
 	const Uart_TxHandler *const txHandler)
 {
-	uint32_t channelNumber =
-		XDMAD_AllocateChannel(&xdmad, XDMAD_TRANSFER_MEMORY,
-				      Hal_get_periph_uart_id(halUart->uart.id));
+	uint32_t channelNumber = XDMAD_AllocateChannel(
+		&xdmad, XDMAD_TRANSFER_MEMORY,
+		Samv71RtemsSerial_Hal_get_periph_uart_id(halUart->uart.id));
 	if (channelNumber <
 	    (xdmad.pXdmacs->XDMAC_GTYPE & XDMAC_GTYPE_NB_CH_Msk)) {
-		Hal_uart_write_init_xdmac_channel(halUart, buffer, length,
-						  txHandler, channelNumber);
+		Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
+			halUart, buffer, length, txHandler, channelNumber);
 		eXdmadRC startResult =
 			XDMAD_StartTransfer(&xdmad, channelNumber);
 		assert(startResult == XDMAD_OK);
