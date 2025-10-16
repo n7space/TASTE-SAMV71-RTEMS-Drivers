@@ -359,10 +359,11 @@ inline static void Samv71RtemsSerial_uart_init_handle(Uart *uart, Uart_Id id)
 	}
 }
 
-/// \brief Starts up, initializes and configures Uart and coresponding
-/// peripherals \param [in] halUart Hal_Uart structure contains uart device
-/// descriptor and relevant fifos. \param [in] halUartConfig configuration
-/// structure
+/** \brief Starts up, initializes and configures Uart and coresponding peripherals
+ *
+ * \param [in] halUart Hal_Uart structure contains uart device descriptor and relevant fifos.
+ * \param [in] halUartConfig configuration structure
+ */
 static void SamV71RtemsSerialInit_uart_init_hardware(
 	Samv71RtemsSerial_Uart *const halUart,
 	Samv71RtemsSerial_Uart_Config halUartConfig)
@@ -437,11 +438,13 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 	assert(callbackResult == XDMAD_OK);
 }
 
-/// \brief Asynchronously sends bytes over uart.
-/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
-/// relevant fifos. \param [in] buffer array containing bytes to send \param
-/// [in] length length of array of bytes \param [in] txHandler pointer to the
-/// handler called after successful array transmission
+/** \brief Asynchronously sends bytes over uart.
+ *
+ * \param [in] halUart Hal_Uart structure contains uart device descriptor and relevant fifos.
+ * \param [in] buffer array containing bytes to send
+ * \param [in] length length of array of bytes
+ * \param [in] txHandler pointer to the  handler called after successful array transmission
+ */
 static void
 SamV71RtemsSerialInit_uart_write(Samv71RtemsSerial_Uart *const halUart,
 				 uint8_t *const buffer, const uint16_t length,
@@ -465,12 +468,13 @@ SamV71RtemsSerialInit_uart_write(Samv71RtemsSerial_Uart *const halUart,
 	}
 }
 
-/// \brief Asynchronously receives bytes over uart.
-/// \param [in] halUart Hal_Uart structure contains uart device descriptor and
-/// relevant fifos. \param [in] buffer array where received bytes will be
-/// stored \param [in] length length of array of bytes \param [in] rxHandler
-/// handler called after successful array reception or after matching character
-/// was found
+/** \brief Asynchronously receives bytes over uart.
+ *
+ * \param [in] halUart Hal_Uart structure contains uart device descriptor and relevant fifos.
+ * \param [in] buffer array where received bytes will be stored
+ * \param [in] length length of array of bytes
+ * \param [in] rxHandler  handler called after successful array reception or after matching character was found
+ */
 static void SamV71RtemsSerial_uart_read(Samv71RtemsSerial_Uart *const halUart,
 					uint8_t *const buffer,
 					const uint16_t length,
