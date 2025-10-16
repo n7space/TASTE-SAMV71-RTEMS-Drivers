@@ -11,6 +11,7 @@ target_link_libraries(Samv71App
                 SAMV71::Runtime::Hal
                 TASTE::SamV71RtemsSerial
                 TASTE::Broker
+                SAMV71::RuntimeMocks
                 SAMV71::Runtime::BrokerLock)
 
 add_format_target(Samv71App)

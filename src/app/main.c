@@ -1,6 +1,33 @@
+/**@file
+ * This file is part of the TASTE SAMV71 RTEMS Drivers.
+ *
+ * @copyright 2025 N7 Space Sp. z o.o.
+ *
+ * Licensed under the ESA Public License (ESA-PL) Permissive (Type 3),
+ * Version 2.4 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://essr.esa.int/license/list
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <rtems.h>
 
+#include <system_spec.h>
+#include <Hal.h>
+#include <drivers_config.h>
 #include <samv71_rtems_serial.h>
+
+/**
+ * @file     main.c
+ * @brief    File to check if drivers code can be properly compiled and linked.
+ */
 
 #define RUNTIME_TASK_COUNT (1 + 3 + 0)
 #define RUNTIME_FUNCTION_COUNT (1 + 2 + (0 * 2))
@@ -19,29 +46,48 @@
 	RTEMS_TASK_STORAGE_SIZE(MAX_TLS_SIZE + RTEMS_MINIMUM_STACK_SIZE, \
 				TASK_ATTRIBUTES)
 
-int main()
-{
-	return 0;
-}
+rtems_id broker_Semaphore;
+enum PacketizerCfg bus_to_packetizer_cfg[SYSTEM_BUSES_NUMBER];
+deliver_function interface_to_deliver_function[INTERFACE_MAX_ID];
+
+static samv71_rtems_serial_private_data driver_private_data;
+
+const Serial_CCSDS_Linux_Conf_T pohidrv_node_1_uart0 = {
+	.devname = "/home/taste/SAMV71",
+	.speed = Serial_CCSDS_Linux_Baudrate_T_b9600,
+	.parity = Serial_CCSDS_Linux_Parity_T_even,
+	.bits = 8UL,
+	.use_paritybit = FALSE,
+	.exist = { .speed = 1, .parity = 1, .bits = 1, .use_paritybit = 1 }
+};
+const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart0 = {
+	.devname = uart4,
+	.speed = Serial_SamV71_Rtems_Baudrate_T_b9600,
+	.parity = Serial_SamV71_Rtems_Parity_T_even,
+	.bits = 8UL,
+	.use_paritybit = FALSE,
+	.exist = { .speed = 1, .parity = 1, .bits = 1, .use_paritybit = 1 }
+};
+
+const uint8_t test_buffer[] = { '\x00', '\xff' };
+const size_t test_buffer_size = sizeof(test_buffer);
 
 rtems_task Init(rtems_task_argument argument)
 {
+	Hal_Init();
+	Samv71RtemsSerialInit(&driver_private_data, BUS_BUS_1,
+			      DEVICE_NODE_2_UART0, &pohidrv_node_2_uart0,
+			      &pohidrv_node_1_uart0);
+
+	Samv71RtemsSerialSend(&driver_private_data, test_buffer,
+			      test_buffer_size);
+
 	(void)rtems_task_delete(RTEMS_SELF);
 }
 
-/* void abort() { rtems_fatal(RTEMS_FATAL_SOURCE_EXIT, 0); } */
-
-/* void __assert_func(const char *file, int line, const char *x, const char *y);
- */
-
-/* void __assert_func(const char *file, int line, const char *x, const char *y)
- * { */
-/*   rtems_fatal(RTEMS_FATAL_SOURCE_EXIT, 0); */
-/* } */
-
 #define CONFIGURE_APPLICATION_NEEDS_CLOCK_DRIVER
 
-#define CONFIGURE_MAXIMUM_PROCESSORS 2
+#define CONFIGURE_MAXIMUM_PROCESSORS 1
 
 #define CONFIGURE_MAXIMUM_BARRIERS 0
 

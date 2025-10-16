@@ -32,6 +32,7 @@
 #include <Pio/Pio.h>
 #include <Nvic/Nvic.h>
 #include <Pmc/Pmc.h>
+#include <SamV71Core/SamV71Core.h>
 
 // global variable required by xdmad.c
 rtems_id xdmad_lock;
@@ -102,7 +103,14 @@ void UART4_Handler(void)
 
 inline static void Init_setup_xdmad_lock()
 {
-	xdmad_lock = Hal_SemaphoreCreate();
+	const rtems_status_code status_code =
+		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
+				       1, // Initial value, unlocked
+				       RTEMS_BINARY_SEMAPHORE,
+				       0, // Priority ceiling
+				       &xdmad_lock);
+
+	assert(status_code == RTEMS_SUCCESSFUL);
 }
 
 static sXdmad xdmad;
@@ -114,7 +122,7 @@ void XDMAC_Handler(void)
 
 static inline void Samv71RtemsSerial_Hal_uart_init_dma(void)
 {
-	Hal_EnablePeripheralClock(Pmc_PeripheralId_Xdmac);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Xdmac);
 
 	Nvic_clearInterruptPending(Nvic_Irq_Xdmac);
 	Nvic_setInterruptPriority(Nvic_Irq_Xdmac,
@@ -130,24 +138,24 @@ static void SamV71RtemsSerial_Init_global()
 	if (!SamV71RtemsSerial_inited) {
 		SamV71RtemsSerial_inited = true;
 		Init_setup_xdmad_lock();
-		Hal_InterruptSubscribe(58, "xdmac",
-				       (rtems_interrupt_handler)&XDMAC_Handler,
-				       NULL);
-		Hal_InterruptSubscribe(7, "uart0",
-				       (rtems_interrupt_handler)&UART0_Handler,
-				       NULL);
-		Hal_InterruptSubscribe(8, "uart1",
-				       (rtems_interrupt_handler)&UART1_Handler,
-				       NULL);
-		Hal_InterruptSubscribe(44, "uart2",
-				       (rtems_interrupt_handler)&UART2_Handler,
-				       NULL);
-		Hal_InterruptSubscribe(45, "uart3",
-				       (rtems_interrupt_handler)&UART3_Handler,
-				       NULL);
-		Hal_InterruptSubscribe(46, "uart4",
-				       (rtems_interrupt_handler)&UART4_Handler,
-				       NULL);
+		SamV71Core_InterruptSubscribe(
+			58, "xdmac", (rtems_interrupt_handler)&XDMAC_Handler,
+			NULL);
+		SamV71Core_InterruptSubscribe(
+			7, "uart0", (rtems_interrupt_handler)&UART0_Handler,
+			NULL);
+		SamV71Core_InterruptSubscribe(
+			8, "uart1", (rtems_interrupt_handler)&UART1_Handler,
+			NULL);
+		SamV71Core_InterruptSubscribe(
+			44, "uart2", (rtems_interrupt_handler)&UART2_Handler,
+			NULL);
+		SamV71Core_InterruptSubscribe(
+			45, "uart3", (rtems_interrupt_handler)&UART3_Handler,
+			NULL);
+		SamV71Core_InterruptSubscribe(
+			46, "uart4", (rtems_interrupt_handler)&UART4_Handler,
+			NULL);
 		Samv71RtemsSerial_Hal_uart_init_dma();
 	}
 }
@@ -355,9 +363,10 @@ static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
 
 inline static void Samv71RtemsSerial_Hal_uart_init_pmc(Uart_Id id)
 {
-	Hal_EnablePeripheralClock(
+	SamV71Core_EnablePeripheralClock(
 		Samv71RtemsSerial_Hal_get_periph_uart_pio_id(id));
-	Hal_EnablePeripheralClock(Samv71RtemsSerial_Hal_get_periph_uart_id(id));
+	SamV71Core_EnablePeripheralClock(
+		Samv71RtemsSerial_Hal_get_periph_uart_id(id));
 }
 
 inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
@@ -410,7 +419,8 @@ static void SamV71RtemsSerialInit_Hal_uart_init(Hal_Uart *const halUart,
 			       .parity = halUartConfig.parity,
 			       .baudRate = halUartConfig.baudrate,
 			       .baudRateClkSrc = Uart_BaudRateClk_PeripheralCk,
-			       .baudRateClkFreq = Hal_GetMainClockFrequency() };
+			       .baudRateClkFreq =
+				       SamV71Core_GetMainClockFrequency() };
 	Uart_setConfig(&halUart->uart, &config);
 }
 
@@ -623,7 +633,15 @@ SamV71RtemsSerialInit_rx_handler(samv71_rtems_serial_private_data *const self)
 	self->m_uart_rx_handler.targetCharacter = STOP_BYTE;
 	self->m_uart_rx_handler.targetLength =
 		Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
-	self->m_rx_semaphore = Hal_SemaphoreCreateSimple();
+
+	const rtems_status_code status_code =
+		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
+				       1, // Initial value, unlocked
+				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
+				       0, // Priority ceiling
+				       &self->m_rx_semaphore);
+
+	assert(status_code == RTEMS_SUCCESSFUL);
 }
 
 static ByteFifo *UartTxCallback(void *private_data)
@@ -642,7 +660,15 @@ SamV71RtemsSerialInit_tx_handler(samv71_rtems_serial_private_data *const self)
 {
 	self->m_uart_tx_handler.callback = UartTxCallback;
 	self->m_uart_tx_handler.arg = self;
-	self->m_tx_semaphore = Hal_SemaphoreCreateSimple();
+
+	const rtems_status_code status_code =
+		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
+				       1, // Initial value, unlocked
+				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
+				       0, // Priority ceiling
+				       &self->m_tx_semaphore);
+
+	assert(status_code == RTEMS_SUCCESSFUL);
 }
 
 void Samv71RtemsSerialInit(
