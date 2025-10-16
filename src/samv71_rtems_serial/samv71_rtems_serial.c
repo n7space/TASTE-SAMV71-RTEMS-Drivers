@@ -139,23 +139,23 @@ static void SamV71RtemsSerial_Init_global()
 		SamV71RtemsSerial_inited = true;
 		Init_setup_xdmad_lock();
 		SamV71Core_InterruptSubscribe(
-			58, "xdmac", (rtems_interrupt_handler)&XDMAC_Handler,
-			NULL);
+			Nvic_Irq_Xdmac, "xdmac",
+			(rtems_interrupt_handler)&XDMAC_Handler, NULL);
 		SamV71Core_InterruptSubscribe(
-			7, "uart0", (rtems_interrupt_handler)&UART0_Handler,
-			NULL);
+			Nvic_Irq_Uart0, "uart0",
+			(rtems_interrupt_handler)&UART0_Handler, NULL);
 		SamV71Core_InterruptSubscribe(
-			8, "uart1", (rtems_interrupt_handler)&UART1_Handler,
-			NULL);
+			Nvic_Irq_Uart1, "uart1",
+			(rtems_interrupt_handler)&UART1_Handler, NULL);
 		SamV71Core_InterruptSubscribe(
-			44, "uart2", (rtems_interrupt_handler)&UART2_Handler,
-			NULL);
+			Nvic_Irq_Uart2, "uart2",
+			(rtems_interrupt_handler)&UART2_Handler, NULL);
 		SamV71Core_InterruptSubscribe(
-			45, "uart3", (rtems_interrupt_handler)&UART3_Handler,
-			NULL);
+			Nvic_Irq_Uart3, "uart3",
+			(rtems_interrupt_handler)&UART3_Handler, NULL);
 		SamV71Core_InterruptSubscribe(
-			46, "uart4", (rtems_interrupt_handler)&UART4_Handler,
-			NULL);
+			Nvic_Irq_Uart4, "uart4",
+			(rtems_interrupt_handler)&UART4_Handler, NULL);
 		Samv71RtemsSerial_Hal_uart_init_dma();
 	}
 }
