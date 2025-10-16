@@ -61,8 +61,8 @@ static Uart *uart4handle;
 #define UART_ID_UART3 "UART3: "
 #define UART_ID_UART4 "UART4: "
 
-#define UART_XDMAD_ERROR_NO_AVALIABLE_CHANNELS \
-	"Hal:Hal_uartWrite: The xdmac channels are not avaliable.\n\r"
+#define UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS \
+	"Hal:Hal_uartWrite: The xdmac channels are not available.\n\r"
 
 #define UART_READ_ERROR_OVERRUN_ERROR "Hal:Hal_uartRead: Overrun error.\n\r"
 #define UART_READ_ERROR_FRAME_ERROR "Hal:Hal_uartRead: Frame error.\n\r"
@@ -167,48 +167,18 @@ void Samv71RtemsSerial_Hal_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 	uartTxHandler->callback(uartTxHandler->arg);
 }
 
-static inline void Samv71RtemsSerial_Hal_uart_print_uart_id(Uart_Id id)
-{
-	/* switch(id) { */
-	/*     case Uart_Id_0: */
-	/*         Hal_console_usart_write(UART_ID_UART0, strlen(UART_ID_UART0)); */
-	/*         break; */
-	/*     case Uart_Id_1: */
-	/*         Hal_console_usart_write(UART_ID_UART1, strlen(UART_ID_UART1)); */
-	/*         break; */
-	/*     case Uart_Id_2: */
-	/*         Hal_console_usart_write(UART_ID_UART2, strlen(UART_ID_UART2)); */
-	/*         break; */
-	/*     case Uart_Id_3: */
-	/*         Hal_console_usart_write(UART_ID_UART3, strlen(UART_ID_UART3)); */
-	/*         break; */
-	/*     case Uart_Id_4: */
-	/*         Hal_console_usart_write(UART_ID_UART4, strlen(UART_ID_UART4)); */
-	/*         break; */
-	/* } */
-}
-
 static inline void
 Samv71RtemsSerial_Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
 	Samv71RtemsSerial_Uart *halUart = (Samv71RtemsSerial_Uart *)arg;
 
-	Samv71RtemsSerial_Hal_uart_print_uart_id(halUart->uart.id);
 	if (errorFlags.hasOverrunOccurred == true) {
-		/* Hal_console_usart_write(UART_READ_ERROR_OVERRUN_ERROR,
-     * strlen(UART_READ_ERROR_OVERRUN_ERROR)); */
 	}
 	if (errorFlags.hasFramingErrorOccurred == true) {
-		/* Hal_console_usart_write(UART_READ_ERROR_FRAME_ERROR,
-     * strlen(UART_READ_ERROR_FRAME_ERROR)); */
 	}
 	if (errorFlags.hasParityErrorOccurred == true) {
-		/* Hal_console_usart_write(UART_READ_ERROR_PARITY_ERROR,
-     * strlen(UART_READ_ERROR_PARITY_ERROR)); */
 	}
 	if (errorFlags.hasRxFifoFullErrorOccurred == true) {
-		/* Hal_console_usart_write(UART_RX_INTERRUPT_ERROR_FIFO_FULL,
-     * strlen(UART_RX_INTERRUPT_ERROR_FIFO_FULL)); */
 		assert(false && "Rx FIFO is full.");
 	}
 }
@@ -329,7 +299,7 @@ static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
                                  .debounceFilterDiv = 0};
 	pioConfigTx.pinsConfig.direction = Pio_Direction_Output;
 
-	Pio_Port_Config pioConfigRx = pioConfigRx;
+	Pio_Port_Config pioConfigRx = pioConfigTx;
 	pioConfigRx.pinsConfig.direction = Pio_Direction_Input;
 
 	switch (id) {
@@ -490,9 +460,9 @@ static void SamV71RtemsSerialInit_Hal_uart_write(
 			XDMAD_StartTransfer(&xdmad, channelNumber);
 		assert(startResult == XDMAD_OK);
 	} else {
-		/* Hal_console_usart_write((uint8_t*)UART_XDMAD_ERROR_NO_AVALIABLE_CHANNELS,
+		/* Hal_console_usart_write((uint8_t*)UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS,
      */
-		/*                         strlen(UART_XDMAD_ERROR_NO_AVALIABLE_CHANNELS));
+		/*                         strlen(UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS));
      */
 	}
 }
