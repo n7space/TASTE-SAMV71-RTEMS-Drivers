@@ -392,7 +392,7 @@ inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
 }
 
 /// \brief Starts up, initializes and configures Uart and coresponding
-/// periferals \param [in] halUart Hal_Uart structure contains uart device
+/// peripherals \param [in] halUart Hal_Uart structure contains uart device
 /// descriptor and relevant fifos. \param [in] halUartConfig configuration
 /// structure
 static void
@@ -452,7 +452,7 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 			XDMAC_CC_SAM_INCREMENTED_AM | XDMAC_CC_DAM_FIXED_AM |
 			periphID, //< Config memory to peripheral transfer. Increment
 		// source buffer address. Keep
-		// desitnation address buffer fixed
+		// destination address buffer fixed
 		.mbr_bc = 0, //< do not add any data stride
 		.mbr_ds = 0,
 		.mbr_sus = 0,
@@ -500,8 +500,8 @@ static void SamV71RtemsSerialInit_Hal_uart_write(
 /// \brief Asynchronously receives bytes over uart.
 /// \param [in] halUart Hal_Uart structure contains uart device descriptor and
 /// relevant fifos. \param [in] buffer array where received bytes will be
-/// storedx \param [in] length length of array of bytes \param [in] rxHandler
-/// handler called after successful array reception or after maching character
+/// stored \param [in] length length of array of bytes \param [in] rxHandler
+/// handler called after successful array reception or after matching character
 /// was found
 static void
 SamV71RtemsSerial_Hal_uart_read(Samv71RtemsSerial_Uart *const halUart,

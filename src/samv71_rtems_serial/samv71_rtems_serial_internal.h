@@ -10,7 +10,7 @@
 typedef struct {
 	Uart_Id id; /// Uart device identifier (0-4)
 	Uart_Parity parity; //< used parity bits
-	uint32_t baudrate; //< chosen baud rate
+	uint32_t baudrate; ///< chosen baud rate
 } Samv71RtemsSerial_Uart_Config;
 
 /// \brief uart structure
