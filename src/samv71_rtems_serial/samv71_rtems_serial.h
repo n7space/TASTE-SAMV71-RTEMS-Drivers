@@ -62,8 +62,8 @@
  */
 typedef struct {
 	Serial_SamV71_Rtems_Device_T m_device;
-	Hal_Uart m_hal_uart;
-	Hal_Uart_Config m_hal_uart_config;
+	Samv71RtemsSerial_Uart m_hal_uart;
+	Samv71RtemsSerial_Uart_Config m_hal_uart_config;
 	uint8_t m_fifo_memory_block[Serial_SAMV71_RTEMS_FIFO_BUFFER_SIZE];
 	uint8_t m_recv_buffer[Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE];
 	uint8_t m_encoded_packet_buffer

@@ -191,7 +191,7 @@ static inline void Samv71RtemsSerial_Hal_uart_print_uart_id(Uart_Id id)
 static inline void
 Samv71RtemsSerial_Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
-	Hal_Uart *halUart = (Hal_Uart *)arg;
+	Samv71RtemsSerial_Uart *halUart = (Samv71RtemsSerial_Uart *)arg;
 
 	Samv71RtemsSerial_Hal_uart_print_uart_id(halUart->uart.id);
 	if (errorFlags.hasOverrunOccurred == true) {
@@ -395,8 +395,9 @@ inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
 /// periferals \param [in] halUart Hal_Uart structure contains uart device
 /// descriptor and relevant fifos. \param [in] halUartConfig configuration
 /// structure
-static void SamV71RtemsSerialInit_Hal_uart_init(Hal_Uart *const halUart,
-						Hal_Uart_Config halUartConfig)
+static void
+SamV71RtemsSerialInit_Hal_uart_init(Samv71RtemsSerial_Uart *const halUart,
+				    Samv71RtemsSerial_Uart_Config halUartConfig)
 {
 	SamV71RtemsSerial_Init_global();
 
@@ -425,8 +426,9 @@ static void SamV71RtemsSerialInit_Hal_uart_init(Hal_Uart *const halUart,
 }
 
 static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
-	Hal_Uart *const halUart, uint8_t *const buffer, const uint16_t length,
-	const Uart_TxHandler *const txHandler, uint32_t channelNumber)
+	Samv71RtemsSerial_Uart *const halUart, uint8_t *const buffer,
+	const uint16_t length, const Uart_TxHandler *const txHandler,
+	uint32_t channelNumber)
 {
 	eXdmadRC prepareResult = XDMAD_PrepareChannel(&xdmad, channelNumber);
 	assert(prepareResult == XDMAD_OK);
@@ -474,8 +476,8 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 /// [in] length length of array of bytes \param [in] txHandler pointer to the
 /// handler called after successful array transmission
 static void SamV71RtemsSerialInit_Hal_uart_write(
-	Hal_Uart *const halUart, uint8_t *const buffer, const uint16_t length,
-	const Uart_TxHandler *const txHandler)
+	Samv71RtemsSerial_Uart *const halUart, uint8_t *const buffer,
+	const uint16_t length, const Uart_TxHandler *const txHandler)
 {
 	uint32_t channelNumber = XDMAD_AllocateChannel(
 		&xdmad, XDMAD_TRANSFER_MEMORY,
@@ -501,10 +503,10 @@ static void SamV71RtemsSerialInit_Hal_uart_write(
 /// storedx \param [in] length length of array of bytes \param [in] rxHandler
 /// handler called after successful array reception or after maching character
 /// was found
-static void SamV71RtemsSerial_Hal_uart_read(Hal_Uart *const halUart,
-					    uint8_t *const buffer,
-					    const uint16_t length,
-					    const Uart_RxHandler rxHandler)
+static void
+SamV71RtemsSerial_Hal_uart_read(Samv71RtemsSerial_Uart *const halUart,
+				uint8_t *const buffer, const uint16_t length,
+				const Uart_RxHandler rxHandler)
 {
 	Uart_ErrorHandler errorHandler = {
 		.callback = Samv71RtemsSerial_Hal_uart_error_handler,
