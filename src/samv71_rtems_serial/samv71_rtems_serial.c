@@ -120,7 +120,7 @@ void XDMAC_Handler(void)
 	XDMAD_Handler(&xdmad);
 }
 
-static inline void Samv71RtemsSerial_Hal_uart_init_dma(void)
+static inline void Samv71RtemsSerial_uart_init_dma(void)
 {
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Xdmac);
 
@@ -156,11 +156,11 @@ static void SamV71RtemsSerial_Init_global()
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart4, "uart4",
 			(rtems_interrupt_handler)&UART4_Handler, NULL);
-		Samv71RtemsSerial_Hal_uart_init_dma();
+		Samv71RtemsSerial_uart_init_dma();
 	}
 }
 
-void Samv71RtemsSerial_Hal_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
+void Samv71RtemsSerial_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 {
 	XDMAD_FreeChannel(&xdmad, xdmacChannel);
 	Uart_TxHandler *uartTxHandler = (Uart_TxHandler *)args;
@@ -168,7 +168,7 @@ void Samv71RtemsSerial_Hal_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 }
 
 static inline void
-Samv71RtemsSerial_Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
+Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
 	Samv71RtemsSerial_Uart *halUart = (Samv71RtemsSerial_Uart *)arg;
 
@@ -184,9 +184,9 @@ Samv71RtemsSerial_Hal_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 }
 
 inline static void
-Samv71RtemsSerial_Hal_uart_init_uart0_pio(Pio_Port *const port,
-					  Pio_Port_Config *const pioConfigTx,
-					  Pio_Port_Config *const pioConfigRx)
+Samv71RtemsSerial_uart_init_uart0_pio(Pio_Port *const port,
+				      Pio_Port_Config *const pioConfigTx,
+				      Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_A;
 
@@ -198,9 +198,9 @@ Samv71RtemsSerial_Hal_uart_init_uart0_pio(Pio_Port *const port,
 }
 
 inline static void
-Samv71RtemsSerial_Hal_uart_init_uart1_pio(Pio_Port *const port,
-					  Pio_Port_Config *const pioConfigTx,
-					  Pio_Port_Config *const pioConfigRx)
+Samv71RtemsSerial_uart_init_uart1_pio(Pio_Port *const port,
+				      Pio_Port_Config *const pioConfigTx,
+				      Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_A;
 
@@ -212,9 +212,9 @@ Samv71RtemsSerial_Hal_uart_init_uart1_pio(Pio_Port *const port,
 }
 
 inline static void
-Samv71RtemsSerial_Hal_uart_init_uart2_pio(Pio_Port *const port,
-					  Pio_Port_Config *const pioConfigTx,
-					  Pio_Port_Config *const pioConfigRx)
+Samv71RtemsSerial_uart_init_uart2_pio(Pio_Port *const port,
+				      Pio_Port_Config *const pioConfigTx,
+				      Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -226,9 +226,9 @@ Samv71RtemsSerial_Hal_uart_init_uart2_pio(Pio_Port *const port,
 }
 
 inline static void
-Samv71RtemsSerial_Hal_uart_init_uart3_pio(Pio_Port *const port,
-					  Pio_Port_Config *const pioConfigTx,
-					  Pio_Port_Config *const pioConfigRx)
+Samv71RtemsSerial_uart_init_uart3_pio(Pio_Port *const port,
+				      Pio_Port_Config *const pioConfigTx,
+				      Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -240,9 +240,9 @@ Samv71RtemsSerial_Hal_uart_init_uart3_pio(Pio_Port *const port,
 }
 
 inline static void
-Samv71RtemsSerial_Hal_uart_init_uart4_pio(Pio_Port *const port,
-					  Pio_Port_Config *const pioConfigTx,
-					  Pio_Port_Config *const pioConfigRx)
+Samv71RtemsSerial_uart_init_uart4_pio(Pio_Port *const port,
+				      Pio_Port_Config *const pioConfigTx,
+				      Pio_Port_Config *const pioConfigRx)
 {
 	*port = Pio_Port_D;
 
@@ -253,8 +253,7 @@ Samv71RtemsSerial_Hal_uart_init_uart4_pio(Pio_Port *const port,
 	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
 }
 
-static inline Pmc_PeripheralId
-Samv71RtemsSerial_Hal_get_periph_uart_id(Uart_Id id)
+static inline Pmc_PeripheralId Samv71RtemsSerial_get_periph_uart_id(Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -271,7 +270,7 @@ Samv71RtemsSerial_Hal_get_periph_uart_id(Uart_Id id)
 }
 
 static inline Pmc_PeripheralId
-Samv71RtemsSerial_Hal_get_periph_uart_pio_id(Uart_Id id)
+Samv71RtemsSerial_get_periph_uart_pio_id(Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -284,7 +283,7 @@ Samv71RtemsSerial_Hal_get_periph_uart_pio_id(Uart_Id id)
 	}
 }
 
-static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
+static inline void Samv71RtemsSerial_uart_init_pio(Uart_Id id)
 {
 	Pio_Port port;
 	Pio_Port_Config pioConfigTx = {.pinsConfig =
@@ -304,24 +303,24 @@ static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
 
 	switch (id) {
 	case Uart_Id_0:
-		Samv71RtemsSerial_Hal_uart_init_uart0_pio(&port, &pioConfigTx,
-							  &pioConfigRx);
+		Samv71RtemsSerial_uart_init_uart0_pio(&port, &pioConfigTx,
+						      &pioConfigRx);
 		break;
 	case Uart_Id_1:
-		Samv71RtemsSerial_Hal_uart_init_uart1_pio(&port, &pioConfigTx,
-							  &pioConfigRx);
+		Samv71RtemsSerial_uart_init_uart1_pio(&port, &pioConfigTx,
+						      &pioConfigRx);
 		break;
 	case Uart_Id_2:
-		Samv71RtemsSerial_Hal_uart_init_uart2_pio(&port, &pioConfigTx,
-							  &pioConfigRx);
+		Samv71RtemsSerial_uart_init_uart2_pio(&port, &pioConfigTx,
+						      &pioConfigRx);
 		break;
 	case Uart_Id_3:
-		Samv71RtemsSerial_Hal_uart_init_uart3_pio(&port, &pioConfigTx,
-							  &pioConfigRx);
+		Samv71RtemsSerial_uart_init_uart3_pio(&port, &pioConfigTx,
+						      &pioConfigRx);
 		break;
 	case Uart_Id_4:
-		Samv71RtemsSerial_Hal_uart_init_uart4_pio(&port, &pioConfigTx,
-							  &pioConfigRx);
+		Samv71RtemsSerial_uart_init_uart4_pio(&port, &pioConfigTx,
+						      &pioConfigRx);
 		break;
 	}
 	Pio pio;
@@ -331,16 +330,15 @@ static inline void Samv71RtemsSerial_Hal_uart_init_pio(Uart_Id id)
 	Pio_setPortConfig(&pio, &pioConfigRx, &errorCode);
 }
 
-inline static void Samv71RtemsSerial_Hal_uart_init_pmc(Uart_Id id)
+inline static void Samv71RtemsSerial_uart_init_pmc(Uart_Id id)
 {
 	SamV71Core_EnablePeripheralClock(
-		Samv71RtemsSerial_Hal_get_periph_uart_pio_id(id));
+		Samv71RtemsSerial_get_periph_uart_pio_id(id));
 	SamV71Core_EnablePeripheralClock(
-		Samv71RtemsSerial_Hal_get_periph_uart_id(id));
+		Samv71RtemsSerial_get_periph_uart_id(id));
 }
 
-inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
-							  Uart_Id id)
+inline static void Samv71RtemsSerial_uart_init_handle(Uart *uart, Uart_Id id)
 {
 	switch (id) {
 	case Uart_Id_0:
@@ -365,9 +363,9 @@ inline static void Samv71RtemsSerial_Hal_uart_init_handle(Uart *uart,
 /// peripherals \param [in] halUart Hal_Uart structure contains uart device
 /// descriptor and relevant fifos. \param [in] halUartConfig configuration
 /// structure
-static void
-SamV71RtemsSerialInit_Hal_uart_init(Samv71RtemsSerial_Uart *const halUart,
-				    Samv71RtemsSerial_Uart_Config halUartConfig)
+static void SamV71RtemsSerialInit_uart_init_hardware(
+	Samv71RtemsSerial_Uart *const halUart,
+	Samv71RtemsSerial_Uart_Config halUartConfig)
 {
 	SamV71RtemsSerial_Init_global();
 
@@ -376,10 +374,9 @@ SamV71RtemsSerialInit_Hal_uart_init(Samv71RtemsSerial_Uart *const halUart,
 	       (halUartConfig.parity == Uart_Parity_None));
 
 	// init uart
-	Samv71RtemsSerial_Hal_uart_init_pmc(halUartConfig.id);
-	Samv71RtemsSerial_Hal_uart_init_pio(halUartConfig.id);
-	Samv71RtemsSerial_Hal_uart_init_handle(&halUart->uart,
-					       halUartConfig.id);
+	Samv71RtemsSerial_uart_init_pmc(halUartConfig.id);
+	Samv71RtemsSerial_uart_init_pio(halUartConfig.id);
+	Samv71RtemsSerial_uart_init_handle(&halUart->uart, halUartConfig.id);
 
 	Uart_init(halUartConfig.id, &halUart->uart);
 	Uart_startup(&halUart->uart);
@@ -435,7 +432,7 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 			XDMAC_CIE_ROIE);
 	assert(configureResult == XDMAD_OK);
 	eXdmadRC callbackResult = XDMAD_SetCallback(
-		&xdmad, channelNumber, Samv71RtemsSerial_Hal_uart_xdmad_handler,
+		&xdmad, channelNumber, Samv71RtemsSerial_uart_xdmad_handler,
 		(void *)txHandler);
 	assert(callbackResult == XDMAD_OK);
 }
@@ -445,13 +442,14 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 /// relevant fifos. \param [in] buffer array containing bytes to send \param
 /// [in] length length of array of bytes \param [in] txHandler pointer to the
 /// handler called after successful array transmission
-static void SamV71RtemsSerialInit_Hal_uart_write(
-	Samv71RtemsSerial_Uart *const halUart, uint8_t *const buffer,
-	const uint16_t length, const Uart_TxHandler *const txHandler)
+static void
+SamV71RtemsSerialInit_uart_write(Samv71RtemsSerial_Uart *const halUart,
+				 uint8_t *const buffer, const uint16_t length,
+				 const Uart_TxHandler *const txHandler)
 {
 	uint32_t channelNumber = XDMAD_AllocateChannel(
 		&xdmad, XDMAD_TRANSFER_MEMORY,
-		Samv71RtemsSerial_Hal_get_periph_uart_id(halUart->uart.id));
+		Samv71RtemsSerial_get_periph_uart_id(halUart->uart.id));
 	if (channelNumber <
 	    (xdmad.pXdmacs->XDMAC_GTYPE & XDMAC_GTYPE_NB_CH_Msk)) {
 		Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
@@ -473,14 +471,13 @@ static void SamV71RtemsSerialInit_Hal_uart_write(
 /// stored \param [in] length length of array of bytes \param [in] rxHandler
 /// handler called after successful array reception or after matching character
 /// was found
-static void
-SamV71RtemsSerial_Hal_uart_read(Samv71RtemsSerial_Uart *const halUart,
-				uint8_t *const buffer, const uint16_t length,
-				const Uart_RxHandler rxHandler)
+static void SamV71RtemsSerial_uart_read(Samv71RtemsSerial_Uart *const halUart,
+					uint8_t *const buffer,
+					const uint16_t length,
+					const Uart_RxHandler rxHandler)
 {
 	Uart_ErrorHandler errorHandler = {
-		.callback = Samv71RtemsSerial_Hal_uart_error_handler,
-		.arg = halUart
+		.callback = Samv71RtemsSerial_uart_error_handler, .arg = halUart
 	};
 	ByteFifo_init(&halUart->rxFifo, buffer, length);
 	Uart_registerErrorHandler(&halUart->uart, errorHandler);
@@ -568,8 +565,8 @@ static inline void SamV71RtemsSerialInit_uart_init(
 					    device_configuration->devname);
 	SamV71RtemsSerialInit_uart_parity(self, device_configuration->parity);
 	SamV71RtemsSerialInit_uart_baudrate(self, device_configuration->speed);
-	SamV71RtemsSerialInit_Hal_uart_init(&self->m_hal_uart,
-					    self->m_hal_uart_config);
+	SamV71RtemsSerialInit_uart_init_hardware(&self->m_hal_uart,
+						 self->m_hal_uart_config);
 }
 
 static void UartRxCallback(void *private_data)
@@ -698,10 +695,10 @@ void Samv71RtemsSerialPoll(void *private_data)
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
-	SamV71RtemsSerial_Hal_uart_read(&self->m_hal_uart,
-					self->m_fifo_memory_block,
-					Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE,
-					self->m_uart_rx_handler);
+	SamV71RtemsSerial_uart_read(&self->m_hal_uart,
+				    self->m_fifo_memory_block,
+				    Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE,
+				    self->m_uart_rx_handler);
 	while (true) {
 		/// Wait for data to arrive. Semaphore will be given
 		obtainResult = rtems_semaphore_obtain(
@@ -738,7 +735,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 						     length, &index);
 		rtems_semaphore_obtain(self->m_tx_semaphore, RTEMS_WAIT,
 				       RTEMS_NO_TIMEOUT);
-		SamV71RtemsSerialInit_Hal_uart_write(
+		SamV71RtemsSerialInit_uart_write(
 			&self->m_hal_uart,
 			(uint8_t *const)&self->m_encoded_packet_buffer,
 			packetLength, &self->m_uart_tx_handler);
