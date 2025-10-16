@@ -62,52 +62,35 @@ void Serial_SamV71_Rtems_Baudrate_T_Initialize(
 	Serial_SamV71_Rtems_Baudrate_T *pVal);
 typedef enum {
 	Serial_SamV71_Rtems_Parity_T_even = 0,
-	Serial_SamV71_Rtems_Parity_T_odd = 1
+	Serial_SamV71_Rtems_Parity_T_odd = 1,
+	none = 2
 } Serial_SamV71_Rtems_Parity_T;
 
 // please use the following macros to avoid breaking code.
 #define Serial_SamV71_Rtems_Parity_T_even Serial_SamV71_Rtems_Parity_T_even
 #define Serial_SamV71_Rtems_Parity_T_odd Serial_SamV71_Rtems_Parity_T_odd
+#define Serial_SamV71_Rtems_Parity_T_none none
 
-#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T 61 /*even | odd*/
+#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T 61 /*even | odd | none*/
 flag Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Parity_T *pVal, int *pErrCode);
 
 void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T *pVal);
 /*-- Serial_SamV71_Rtems_Conf_T --------------------------------------------*/
-typedef asn1SccUint Serial_SamV71_Rtems_Conf_T_bits;
-
-typedef struct {
-	unsigned long speed : 1;
-	unsigned long parity : 1;
-	unsigned long bits : 1;
-	unsigned long use_paritybit : 1;
-} Serial_SamV71_Rtems_Conf_T_exist;
 typedef struct {
 	Serial_SamV71_Rtems_Device_T devname;
 	Serial_SamV71_Rtems_Baudrate_T speed;
 	Serial_SamV71_Rtems_Parity_T parity;
-	Serial_SamV71_Rtems_Conf_T_bits bits;
-	flag use_paritybit;
-
-	Serial_SamV71_Rtems_Conf_T_exist exist;
 
 } Serial_SamV71_Rtems_Conf_T;
 
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_BITS 96 /*(7 .. 8)*/
-flag Serial_SamV71_Rtems_Conf_T_bits_IsConstraintValid(
-	const Serial_SamV71_Rtems_Conf_T_bits *pVal, int *pErrCode);
-
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T 106 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T 96 /**/
 #define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME_2 71 /**/
 #define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2 81 /**/
 #define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2 91 /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_USE_PARITYBIT 101 /**/
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Conf_T *pVal, int *pErrCode);
 
-void Serial_SamV71_Rtems_Conf_T_bits_Initialize(
-	Serial_SamV71_Rtems_Conf_T_bits *pVal);
 void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T *pVal);
 
 /* ================= Encoding/Decoding function prototypes =================

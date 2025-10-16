@@ -21,8 +21,5 @@ const Serial_CCSDS_Linux_Conf_T pohidrv_node_1_uart0 = {
 const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart0 = {
 	.devname = uart4,
 	.speed = Serial_SamV71_Rtems_Baudrate_T_b9600,
-	.parity = Serial_SamV71_Rtems_Parity_T_even,
-	.bits = 8UL,
-	.use_paritybit = FALSE,
-	.exist = { .speed = 1, .parity = 1, .bits = 1, .use_paritybit = 1 }
+	.parity = Serial_SamV71_Rtems_Parity_T_even
 };

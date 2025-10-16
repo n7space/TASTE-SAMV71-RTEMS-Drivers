@@ -54,8 +54,9 @@ flag Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Parity_T *pVal, int *pErrCode)
 {
 	flag ret = TRUE;
-	ret = ((((*(pVal)) == Serial_SamV71_Rtems_Parity_T_even)) ||
-	       (((*(pVal)) == Serial_SamV71_Rtems_Parity_T_odd)));
+	ret = ((((((*(pVal)) == Serial_SamV71_Rtems_Parity_T_even)) ||
+		 (((*(pVal)) == Serial_SamV71_Rtems_Parity_T_odd)))) ||
+	       (((*(pVal)) == none)));
 	*pErrCode = ret ? 0 : ERR_SERIAL_SAMV71_RTEMS_PARITY_T;
 
 	return ret;
@@ -68,16 +69,6 @@ void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T *pVal)
 	(*(pVal)) = Serial_SamV71_Rtems_Parity_T_even;
 }
 
-flag Serial_SamV71_Rtems_Conf_T_bits_IsConstraintValid(
-	const Serial_SamV71_Rtems_Conf_T_bits *pVal, int *pErrCode)
-{
-	flag ret = TRUE;
-	ret = ((7UL <= (*(pVal))) && ((*(pVal)) <= 8UL));
-	*pErrCode = ret ? 0 : ERR_SERIAL_SAMV71_RTEMS_CONF_T_BITS;
-
-	return ret;
-}
-
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Conf_T *pVal, int *pErrCode)
 {
@@ -85,34 +76,17 @@ flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 	ret = Serial_SamV71_Rtems_Device_T_IsConstraintValid((&(pVal->devname)),
 							     pErrCode);
 	if (ret) {
-		if (pVal->exist.speed) {
-			ret = Serial_SamV71_Rtems_Baudrate_T_IsConstraintValid(
-				(&(pVal->speed)), pErrCode);
-		}
+		ret = Serial_SamV71_Rtems_Baudrate_T_IsConstraintValid(
+			(&(pVal->speed)), pErrCode);
 		if (ret) {
-			if (pVal->exist.parity) {
-				ret = Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
-					(&(pVal->parity)), pErrCode);
-			}
-			if (ret) {
-				if (pVal->exist.bits) {
-					ret = Serial_SamV71_Rtems_Conf_T_bits_IsConstraintValid(
-						(&(pVal->bits)), pErrCode);
-				}
-			} /*COVERAGE_IGNORE*/
+			ret = Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
+				(&(pVal->parity)), pErrCode);
 		} /*COVERAGE_IGNORE*/
 	} /*COVERAGE_IGNORE*/
 
 	return ret;
 }
 
-void Serial_SamV71_Rtems_Conf_T_bits_Initialize(
-	Serial_SamV71_Rtems_Conf_T_bits *pVal)
-{
-	(void)pVal;
-
-	(*(pVal)) = 7UL;
-}
 void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T *pVal)
 {
 	(void)pVal;
@@ -120,15 +94,7 @@ void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T *pVal)
 	/*set devname */
 	Serial_SamV71_Rtems_Device_T_Initialize((&(pVal->devname)));
 	/*set speed */
-	pVal->exist.speed = 1;
 	Serial_SamV71_Rtems_Baudrate_T_Initialize((&(pVal->speed)));
 	/*set parity */
-	pVal->exist.parity = 1;
 	Serial_SamV71_Rtems_Parity_T_Initialize((&(pVal->parity)));
-	/*set bits */
-	pVal->exist.bits = 1;
-	Serial_SamV71_Rtems_Conf_T_bits_Initialize((&(pVal->bits)));
-	/*set use_paritybit */
-	pVal->exist.use_paritybit = 1;
-	pVal->use_paritybit = FALSE;
 }

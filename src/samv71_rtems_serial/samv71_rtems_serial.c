@@ -543,32 +543,21 @@ SamV71RtemsSerialInit_uart_register(samv71_rtems_serial_private_data *self,
 }
 
 static inline void
-SamV71RtemsSerialInit_uart_data_bits(samv71_rtems_serial_private_data *self,
-				     Serial_SamV71_Rtems_Conf_T_bits bits)
-{
-	(void)self;
-	(void)bits;
-	assert((bits == 8) && "Not supported number of data bits");
-}
-
-static inline void
 SamV71RtemsSerialInit_uart_parity(samv71_rtems_serial_private_data *self,
-				  bool useParity,
 				  Serial_SamV71_Rtems_Parity_T parity)
 {
-	if (useParity) {
-		switch (parity) {
-		case Serial_SamV71_Rtems_Parity_T_odd:
-			self->m_hal_uart_config.parity = Uart_Parity_Odd;
-			break;
-		case Serial_SamV71_Rtems_Parity_T_even:
-			self->m_hal_uart_config.parity = Uart_Parity_Even;
-			break;
-		default:
-			assert(false && "Not supported parity");
-		}
-	} else {
+	switch (parity) {
+	case Serial_SamV71_Rtems_Parity_T_odd:
+		self->m_hal_uart_config.parity = Uart_Parity_Odd;
+		break;
+	case Serial_SamV71_Rtems_Parity_T_even:
+		self->m_hal_uart_config.parity = Uart_Parity_Even;
+		break;
+	case Serial_SamV71_Rtems_Parity_T_none:
 		self->m_hal_uart_config.parity = Uart_Parity_None;
+		break;
+	default:
+		assert(false && "Not supported parity");
 	}
 }
 
@@ -607,10 +596,7 @@ static inline void SamV71RtemsSerialInit_uart_init(
 {
 	SamV71RtemsSerialInit_uart_register(self,
 					    device_configuration->devname);
-	SamV71RtemsSerialInit_uart_data_bits(self, device_configuration->bits);
-	SamV71RtemsSerialInit_uart_parity(self,
-					  device_configuration->use_paritybit,
-					  device_configuration->parity);
+	SamV71RtemsSerialInit_uart_parity(self, device_configuration->parity);
 	SamV71RtemsSerialInit_uart_baudrate(self, device_configuration->speed);
 	SamV71RtemsSerialInit_Hal_uart_init(&self->m_hal_uart,
 					    self->m_hal_uart_config);
