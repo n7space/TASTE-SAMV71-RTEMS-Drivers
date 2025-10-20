@@ -34,6 +34,14 @@
 #include <Pmc/Pmc.h>
 #include <SamV71Core/SamV71Core.h>
 
+static Samv71RtemsSerial_UserUartErrorCallback
+	Samv71RtemsSerial_user_uart_error_callback = NULL;
+static void *Samv71RtemsSerial_user_uart_error_callback_arg = NULL;
+
+static Samv71RtemsSerial_UserXdmadErrorCallback
+	Samv71RtemsSerial_user_xdmad_error_callback = NULL;
+static void *Samv71RtemsSerial_user_xdmad_error_callback_arg = NULL;
+
 // global variable required by xdmad.c
 rtems_id xdmad_lock;
 
@@ -60,9 +68,6 @@ static Uart *uart4handle;
 #define UART_ID_UART2 "UART2: "
 #define UART_ID_UART3 "UART3: "
 #define UART_ID_UART4 "UART4: "
-
-#define UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS \
-	"Hal:Hal_uartWrite: The xdmac channels are not available.\n\r"
 
 #define UART_READ_ERROR_OVERRUN_ERROR "Hal:Hal_uartRead: Overrun error.\n\r"
 #define UART_READ_ERROR_FRAME_ERROR "Hal:Hal_uartRead: Frame error.\n\r"
@@ -172,14 +177,10 @@ Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
 	Samv71RtemsSerial_Uart *halUart = (Samv71RtemsSerial_Uart *)arg;
 
-	if (errorFlags.hasOverrunOccurred == true) {
-	}
-	if (errorFlags.hasFramingErrorOccurred == true) {
-	}
-	if (errorFlags.hasParityErrorOccurred == true) {
-	}
-	if (errorFlags.hasRxFifoFullErrorOccurred == true) {
-		assert(false && "Rx FIFO is full.");
+	if (Samv71RtemsSerial_user_uart_error_callback != NULL) {
+		Samv71RtemsSerial_user_uart_error_callback(
+			errorFlags,
+			Samv71RtemsSerial_user_uart_error_callback_arg);
 	}
 }
 
@@ -459,12 +460,14 @@ SamV71RtemsSerialInit_uart_write(Samv71RtemsSerial_Uart *const halUart,
 			halUart, buffer, length, txHandler, channelNumber);
 		eXdmadRC startResult =
 			XDMAD_StartTransfer(&xdmad, channelNumber);
-		assert(startResult == XDMAD_OK);
-	} else {
-		/* Hal_console_usart_write((uint8_t*)UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS,
-     */
-		/*                         strlen(UART_XDMAD_ERROR_NO_AVAILABLE_CHANNELS));
-     */
+		if ((startResult != XDMAD_OK) &&
+		    (Samv71RtemsSerial_user_xdmad_error_callback != NULL)) {
+			Samv71RtemsSerial_user_xdmad_error_callback(
+				Samv71RtemsSerial_user_xdmad_error_callback_arg);
+		}
+	} else if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
+		Samv71RtemsSerial_user_xdmad_error_callback(
+			Samv71RtemsSerial_user_xdmad_error_callback_arg);
 	}
 }
 
@@ -744,4 +747,18 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 			(uint8_t *const)&self->m_encoded_packet_buffer,
 			packetLength, &self->m_uart_tx_handler);
 	}
+}
+
+void Samv71RtemsSerialRegisterUserUartErrorCallback(
+	Samv71RtemsSerial_UserUartErrorCallback callback, void *arg)
+{
+	Samv71RtemsSerial_user_uart_error_callback = callback;
+	Samv71RtemsSerial_user_uart_error_callback_arg = arg;
+}
+
+void Samv71RtemsSerialRegisterUserXdmadErrorCallback(
+	Samv71RtemsSerial_UserXdmadErrorCallback callback, void *arg)
+{
+	Samv71RtemsSerial_user_xdmad_error_callback = callback;
+	Samv71RtemsSerial_user_xdmad_error_callback_arg = arg;
 }

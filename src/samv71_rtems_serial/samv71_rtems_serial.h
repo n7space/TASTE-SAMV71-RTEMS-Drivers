@@ -36,6 +36,7 @@
 #include <Escaper.h>
 
 #include <Hal.h>
+#include <Uart/Uart.h>
 
 #include <drivers_config.h>
 #include <system_spec.h>
@@ -83,6 +84,17 @@ typedef struct {
 } samv71_rtems_serial_private_data;
 
 /**
+ * @brief Function pointer definition for registering uart error callback.
+ */
+typedef void (*Samv71RtemsSerial_UserUartErrorCallback)(Uart_ErrorFlags,
+							void *);
+
+/**
+ * @brief Function pointer definition for registering xdmad error callback.
+ */
+typedef void (*Samv71RtemsSerial_UserXdmadErrorCallback)(void *);
+
+/**
  * @brief Initialize samv71_rtems_serial driver.
  *
  * Function is used by runtime to initialize the driver.
@@ -122,5 +134,23 @@ void Samv71RtemsSerialPoll(void *private_data);
  */
 void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 			   const size_t length);
+
+/**
+ * @brief Register callback for uart errors.
+ *
+ * @param callback       Pointer to the callback function.
+ * @param arg            Argument which shall be passed when calling callback function.
+ */
+void Samv71RtemsSerialRegisterUserUartErrorCallback(
+	Samv71RtemsSerial_UserUartErrorCallback callback, void *arg);
+
+/**
+ * @brief Register callback for xdmad errors.
+ *
+ * @param callback       Pointer to the callback function.
+ * @param arg            Argument which shall be passed when calling callback function.
+ */
+void Samv71RtemsSerialRegisterUserXdmadErrorCallback(
+	Samv71RtemsSerial_UserXdmadErrorCallback callback, void *arg);
 
 #endif
