@@ -8,7 +8,7 @@ target_include_directories(Samv71App
 
 target_link_libraries(Samv71App
     PRIVATE     common_build_options
-                SAMV71::Runtime::Hal
+                SAMV71::Runtime
                 TASTE::SamV71RtemsSerial
                 TASTE::Broker
                 SAMV71::RuntimeMocks
