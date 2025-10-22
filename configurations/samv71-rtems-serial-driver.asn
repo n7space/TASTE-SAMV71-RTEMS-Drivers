@@ -1,0 +1,15 @@
+SAMV71-RTEMS-SERIAL-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+Serial-SamV71-Rtems-Device-T    ::= ENUMERATED { uart0, uart1, uart2, uart3, uart4 }
+
+Serial-SamV71-Rtems-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b115200, b230400}
+
+Serial-SamV71-Rtems-Parity-T    ::= ENUMERATED {even, odd, none}
+
+Serial-SamV71-Rtems-Conf-T ::= SEQUENCE {
+   devname        Serial-SamV71-Rtems-Device-T,
+   speed          Serial-SamV71-Rtems-Baudrate-T,
+   parity         Serial-SamV71-Rtems-Parity-T
+}
+
+END
