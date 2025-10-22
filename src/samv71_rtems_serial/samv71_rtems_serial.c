@@ -400,7 +400,13 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 	uint32_t channelNumber)
 {
 	eXdmadRC prepareResult = XDMAD_PrepareChannel(&xdmad, channelNumber);
-	assert(prepareResult == XDMAD_OK);
+	if (prepareResult != XDMAD_OK) {
+		if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
+			Samv71RtemsSerial_user_xdmad_error_callback(
+				Samv71RtemsSerial_user_xdmad_error_callback_arg);
+		}
+		return;
+	}
 
 	//< Get Uart Tx peripheral xdmac id
 	uint32_t periphID = xdmad.XdmaChannels[channelNumber].bDstTxIfID
@@ -432,11 +438,23 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 		&xdmad, channelNumber, &config, 0, 0,
 		XDMAC_CIE_BIE | XDMAC_CIE_RBIE | XDMAC_CIE_WBIE |
 			XDMAC_CIE_ROIE);
-	assert(configureResult == XDMAD_OK);
+	if (configureResult != XDMAD_OK) {
+		if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
+			Samv71RtemsSerial_user_xdmad_error_callback(
+				Samv71RtemsSerial_user_xdmad_error_callback_arg);
+		}
+		return;
+	}
 	eXdmadRC callbackResult = XDMAD_SetCallback(
 		&xdmad, channelNumber, Samv71RtemsSerial_uart_xdmad_handler,
 		(void *)txHandler);
-	assert(callbackResult == XDMAD_OK);
+
+	if (callbackResult != XDMAD_OK) {
+		if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
+			Samv71RtemsSerial_user_xdmad_error_callback(
+				Samv71RtemsSerial_user_xdmad_error_callback_arg);
+		}
+	}
 }
 
 /** \brief Asynchronously sends bytes over uart.
