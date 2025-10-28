@@ -1,0 +1,9 @@
+SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+	CAN-Samv71-Rtems-Dummy-T ::= ENUMERATED { ison, isoff }
+
+	CAN-Samv71-Rtems-Conf-T ::= SEQUENCE {
+        dummy CAN-Samv71-Rtems-Dummy-T
+    }
+
+END
