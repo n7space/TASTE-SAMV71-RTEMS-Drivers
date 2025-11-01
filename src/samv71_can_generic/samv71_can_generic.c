@@ -1,5 +1,6 @@
 #include "samv71_can_generic.h"
 
+#include "Pmc/PmcPeripheralId.h"
 #include "Utils/ErrorCode.h"
 #include <stdlib.h>
 #include <stdbool.h>
@@ -25,25 +26,25 @@
 #define MCAN_TEST_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
 
-static  __attribute__((aligned(4096))) uint32_t msgRam[MSGRAM_SIZE];
+static __attribute__((aligned(4096))) uint32_t msgRam[MSGRAM_SIZE];
 
 static Mcan mcan;
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = msgRam,
-    .mode = Mcan_Mode_InternalLoopBackTest,
-    .isFdEnabled = TRUE,
+    .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest,
+    .isFdEnabled = FALSE,
     .nominalBitTiming = {
-      .bitRatePrescaler = 23u,
-      .synchronizationJump = 1u,
-      .timeSegmentAfterSamplePoint = 1u,
-      .timeSegmentBeforeSamplePoint = 1u,
+      .bitRatePrescaler = 0u,
+      .synchronizationJump = 2u,
+      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentBeforeSamplePoint = 15u,
     },
     .dataBitTiming = {
-      .bitRatePrescaler = 1u,
-      .synchronizationJump = 1u,
-      .timeSegmentAfterSamplePoint = 1u,
-      .timeSegmentBeforeSamplePoint = 1u,
+      .bitRatePrescaler = 0u,
+      .synchronizationJump = 2u,
+      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentBeforeSamplePoint = 15u,
     },
     .transmitterDelayCompensation = {
       .isEnabled = FALSE,
@@ -51,14 +52,14 @@ static const Mcan_Config defaultConfig = {
       .offset = 0u,
     },
     .timestampClk = Mcan_TimestampClk_Internal,
-    .timestampTimeoutPrescaler = 0u,
+    .timestampTimeoutPrescaler = 14u,
     .timeout = {
       .isEnabled = FALSE,
       .type = Mcan_TimeoutType_Continuous,
       .period = 0u,
     },
     .standardIdFilter = {
-      .isIdRejected = TRUE,
+      .isIdRejected = FALSE,
       .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
       .filterListAddress = NULL,
       .filterListSize = 0u,
@@ -80,9 +81,9 @@ static const Mcan_Config defaultConfig = {
     .rxFifo1 = {
       .isEnabled = TRUE,
       .startAddress = &msgRam[MSGRAM_RXFIFO1_OFFSET],
-      .size = 1u,
+      .size = 96u,
       .watermark = 0u,
-      .mode = Mcan_RxFifoOperationMode_Overwrite,
+      .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
     },
     .rxBuffer = {
@@ -92,8 +93,8 @@ static const Mcan_Config defaultConfig = {
     .txBuffer = {
       .isEnabled = TRUE,
       .startAddress = &msgRam[MSGRAM_TXBUFFER_OFFSET],
-      .bufferSize = 1u,
-      .queueSize = 0u,
+      .bufferSize = 0u,
+      .queueSize = 32u,
       .queueType = Mcan_TxQueueType_Fifo,
       .elementSize = Mcan_ElementSize_8,
     },
@@ -102,9 +103,18 @@ static const Mcan_Config defaultConfig = {
 					.size = 0,
 					.watermark = 0,
 	},
-    .interrupts = {},
+    .interrupts = {
+	  {
+		.isEnabled = FALSE,
+		.line = Mcan_InterruptLine_0,
+	  },
+	  {
+		.isEnabled = TRUE,
+		.line = Mcan_InterruptLine_1,
+	  }
+	},
     .isLine0InterruptEnabled = FALSE,
-    .isLine1InterruptEnabled = FALSE,
+    .isLine1InterruptEnabled = TRUE,
     .wdtCounter = 0u,
   };
 
@@ -161,33 +171,74 @@ static bool waitForTransmissionFinished(uint32_t timeout)
 	return false;
 }
 
-void SamV71RtemsCanInit(
-	void *private_data, const enum SystemBus bus_id,
-	const enum SystemDevice device_id,
-	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
-	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
+static void fillMsgData(uint8_t *txData, uint8_t bytesCount)
 {
-	const Pmc_PckConfig pckConfig = {
-		.isEnabled = true,
-		.src = Pmc_PckSrc_Pllack,
-		.presc = 4,
-	};
+	for (uint8_t i = 0; i < bytesCount; ++i) {
+		txData[i] = i + 1u;
+	}
+}
 
-	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
-						    PMC_DEFAULT_TIMEOUT, NULL);
-	assert(setCfgResult);
+static void configurePioCan0()
+{
+	Pio pioCanTx;
+	ErrorCode errorCode = 0;
+	bool pioStatus = Pio_init(Pio_Port_B, &pioCanTx, &errorCode);
+	assert(pioStatus);
+	assert(errorCode == ErrorCode_NoError);
+	Pio_Port_Config pioCanTxConfig = {
+	.pins = PIO_PIN_2,
+	.pinsConfig = {
+	  .control = Pio_Control_Pio,
+	  .direction = Pio_Direction_Output,
+	  .pull = Pio_Pull_None,
+	  .filter = Pio_Filter_None,
+	  .isMultiDriveEnabled = FALSE,
+	  .irq = Pio_Irq_None,
+	  .driveStrength = Pio_Drive_Low,
+	  .isSchmittTriggerDisabled = FALSE,
+	},
+	.debounceFilterDiv = 0,
+  };
+	pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
+	assert(pioStatus);
+	assert(errorCode == ErrorCode_NoError);
 
-  	Pio pioCanTx;
+	Pio pioCanRx;
+	pioStatus = Pio_init(Pio_Port_B, &pioCanRx, &errorCode);
+	assert(pioStatus);
+	assert(errorCode == ErrorCode_NoError);
+	Pio_Port_Config pioCanRxConfig = {
+	.pins = PIO_PIN_3,
+	.pinsConfig = {
+	  .control = Pio_Control_PeripheralA,
+	  .direction = Pio_Direction_Output,
+	  .pull = Pio_Pull_Up,
+	  .filter = Pio_Filter_None,
+	  .isMultiDriveEnabled =FALSE,
+	  .irq = Pio_Irq_None,
+	  .driveStrength = Pio_Drive_Low,
+	  .isSchmittTriggerDisabled = FALSE,
+	},
+	.debounceFilterDiv = 0,
+  };
+	pioStatus = Pio_setPortConfig(&pioCanRx, &pioCanRxConfig, &errorCode);
+	assert(pioStatus);
+	assert(errorCode == ErrorCode_NoError);
+}
+
+static void configurePioCan1()
+{
+	Pio pioCanTx;
 	ErrorCode errorCode = 0;
 	bool pioStatus = Pio_init(Pio_Port_C, &pioCanTx, &errorCode);
-  	assert(pioStatus);
+	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 	Pio_Port_Config pioCanTxConfig = {
 	  .pins = PIO_PIN_14,
 	  .pinsConfig = {
-		.control = Pio_Control_PeripheralC,
+		.control = Pio_Control_Pio,
 		.direction = Pio_Direction_Output,
-		.pull = Pio_Pull_Up,
+		.pull = Pio_Pull_None,
 		.filter = Pio_Filter_None,
 		.isMultiDriveEnabled = FALSE,
 		.irq = Pio_Irq_None,
@@ -197,7 +248,7 @@ void SamV71RtemsCanInit(
 	  .debounceFilterDiv = 0,
 	};
 	pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
-  	assert(pioStatus);
+	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 
 	Pio pioCanRx;
@@ -221,11 +272,33 @@ void SamV71RtemsCanInit(
 	pioStatus = Pio_setPortConfig(&pioCanRx, &pioCanRxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
+}
+
+void SamV71RtemsCanInit(
+	void *private_data, const enum SystemBus bus_id,
+	const enum SystemDevice device_id,
+	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
+	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
+{
+	const Pmc_PckConfig pckConfig = {
+		.isEnabled = true,
+		.src = Pmc_PckSrc_Pllack,
+		.presc = 14,
+	};
+
+	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
+						    PMC_DEFAULT_TIMEOUT, NULL);
+	assert(setCfgResult);
+
+	configurePioCan0();
+	configurePioCan1();
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      MCAN1_INT0_Handler, NULL);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
 
 	memset(msgRam, sizeof(msgRam), '\0');
 	Mcan_init(&mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
@@ -235,13 +308,13 @@ void SamV71RtemsCanInit(
 	// possibly here is something more
 
 	Mcan_Config conf = defaultConfig;
-	conf.standardIdFilter.isIdRejected = TRUE;
-	conf.extendedIdFilter.isIdRejected = TRUE;
-	conf.extendedIdFilter.nonMatchingPolicy =
-		Mcan_NonMatchingPolicy_RxFifo0;
-	conf.extendedIdFilter.filterListSize = 0;
-	conf.rxFifo0.elementSize = testElementSize;
-	conf.txBuffer.elementSize = testElementSize;
+	/* conf.standardIdFilter.isIdRejected = TRUE; */
+	/* conf.extendedIdFilter.isIdRejected = TRUE; */
+	/* conf.extendedIdFilter.nonMatchingPolicy = */
+	/* 	Mcan_NonMatchingPolicy_RxFifo0; */
+	/* conf.extendedIdFilter.filterListSize = 0; */
+	/* conf.rxFifo0.elementSize = testElementSize; */
+	/* conf.txBuffer.elementSize = testElementSize; */
 
 	ErrorCode errCode = ErrorCode_NoError;
 	bool setConfResult =
@@ -250,55 +323,59 @@ void SamV71RtemsCanInit(
 	assert(errCode == ErrorCode_NoError);
 
 	// this is for comparision
-	Mcan_Config readConfig;
-	Mcan_getConfig(&mcan, &readConfig);
+	/* Mcan_Config readConfig; */
+	/* Mcan_getConfig(&mcan, &readConfig); */
 
-	int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config));
-	assert(cmpResult == 0);
+	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
+	/* assert(cmpResult == 0); */
 
 	const uint8_t bytesCount = getElementBytesCount(testElementSize);
 
 	uint8_t txData[64];
-	for (uint8_t i = 0; i < bytesCount; ++i) {
-		txData[i] = i + 1u;
-	}
+	fillMsgData(txData, bytesCount);
 
 	const Mcan_TxElement txElement = {
 		.esiFlag = Mcan_ElementEsi_Dominant,
-		.idType = Mcan_IdType_Extended,
+		.idType = Mcan_IdType_Standard,
 		.frameType = Mcan_FrameType_Data,
 		.id = 3,
-		.marker = 1,
+		.marker = 0,
 		.isTxEventStored = FALSE,
-		.isCanFdFormatEnabled = TRUE,
+		.isCanFdFormatEnabled = FALSE,
 		.isBitRateSwitchingEnabled = FALSE,
 		.dataSize = bytesCount,
 		.data = txData,
 		.isInterruptEnabled = FALSE,
 	};
 
-	bool bufferAddResult = Mcan_txBufferAdd(&mcan, txElement, 0, &errCode);
-	assert(bufferAddResult);
+	/* bool bufferAddResult = Mcan_txBufferAdd(&mcan, txElement, 0, &errCode); */
+	/* assert(bufferAddResult); */
+	/* assert(errCode == ErrorCode_NoError); */
+
+	uint8_t pushIndex;
+	bool pushResult =
+		Mcan_txQueuePush(&mcan, txElement, &pushIndex, &errCode);
+	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
 	bool result = waitForTransmissionFinished(MCAN_TEST_TIMEOUT);
 	assert(result);
-	Mcan_RxFifoStatus fifoStatus;
-	bool fifoStatusResult =
-		Mcan_getRxFifoStatus(&mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);
-	assert(fifoStatusResult);
-	assert(fifoStatus.count == 1);
-	assert(fifoStatus.isFull);
-	assert(fifoStatus.isMessageLost == FALSE);
+	/* Mcan_RxFifoStatus fifoStatus; */
+	/* bool fifoStatusResult = */
+	/* 	Mcan_getRxFifoStatus(&mcan, Mcan_RxFifoId_0, &fifoStatus, NULL); */
+	/* assert(fifoStatusResult); */
+	/* assert(fifoStatus.count == 1); */
+	/* assert(fifoStatus.isFull); */
+	/* assert(fifoStatus.isMessageLost == FALSE); */
 
-	uint8_t rxData[64];
-	Mcan_RxElement rxElement;
-	rxElement.data = rxData;
-	bool fifoPullResult =
-		Mcan_rxFifoPull(&mcan, Mcan_RxFifoId_0, &rxElement, &errCode);
+	/* uint8_t rxData[64]; */
+	/* Mcan_RxElement rxElement; */
+	/* rxElement.data = rxData; */
+	/* bool fifoPullResult = */
+	/* 	Mcan_rxFifoPull(&mcan, Mcan_RxFifoId_0, &rxElement, &errCode); */
 
-	assert(fifoPullResult);
-	assert(errCode == ErrorCode_NoError);
+	/* assert(fifoPullResult); */
+	/* assert(errCode == ErrorCode_NoError); */
 }
 
 void SamV71RtemsCanPoll(void *private_data)
