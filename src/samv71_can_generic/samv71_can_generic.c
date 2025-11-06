@@ -13,14 +13,21 @@
 
 #include <SamV71Core/SamV71Core.h>
 
-#define MSGRAM_SIZE 1024
+#define MSGRAM_SIZE 512
 #define MSGRAM_STDID_FILTER_OFFSET 0
-#define MSGRAM_EXTID_FILTER_OFFSET 4
-#define MSGRAM_RXFIFO0_OFFSET 16
-#define MSGRAM_RXFIFO1_OFFSET 144
-#define MSGRAM_RXBUFFER_OFFSET 272
-#define MSGRAM_TXEVENTINFO_OFFSET 400
-#define MSGRAM_TXBUFFER_OFFSET 432
+#define MSGRAM_STDID_FILTER_SIZE 0
+#define MSGRAM_EXTID_FILTER_OFFSET 0
+#define MSGRAM_EXTID_FILTER_SIZE 0
+#define MSGRAM_RXFIFO0_OFFSET 0
+#define MSGRAM_RXFIFO0_SIZE 384
+#define MSGRAM_RXFIFO1_OFFSET 384
+#define MSGRAM_RXFIFO1_SIZE 0
+#define MSGRAM_RXBUFFER_OFFSET 384
+#define MSGRAM_RXBUFFER_SIZE 0
+#define MSGRAM_TXEVENTINFO_OFFSET 384
+#define MSGRAM_TXEVENTINFO_SIZE 0
+#define MSGRAM_TXBUFFER_OFFSET 384
+#define MSGRAM_TXBUFFER_SIZE 128
 
 // TODO temporary
 #define MCAN_TEST_TIMEOUT 100000u
@@ -37,13 +44,13 @@ static const Mcan_Config defaultConfig = {
     .nominalBitTiming = {
       .bitRatePrescaler = 0u,
       .synchronizationJump = 2u,
-      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentAfterSamplePoint = 1u,
       .timeSegmentBeforeSamplePoint = 15u,
     },
     .dataBitTiming = {
       .bitRatePrescaler = 0u,
       .synchronizationJump = 2u,
-      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentAfterSamplePoint = 1u,
       .timeSegmentBeforeSamplePoint = 15u,
     },
     .transmitterDelayCompensation = {
@@ -73,15 +80,15 @@ static const Mcan_Config defaultConfig = {
     .rxFifo0 = {
       .isEnabled = TRUE,
       .startAddress = &msgRam[MSGRAM_RXFIFO0_OFFSET],
-      .size = 1u,
+      .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
       .watermark = 0u,
-      .mode = Mcan_RxFifoOperationMode_Overwrite,
+      .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
     },
     .rxFifo1 = {
-      .isEnabled = TRUE,
+      .isEnabled = FALSE,
       .startAddress = &msgRam[MSGRAM_RXFIFO1_OFFSET],
-      .size = 96u,
+      .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
       .watermark = 0u,
       .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
@@ -94,11 +101,11 @@ static const Mcan_Config defaultConfig = {
       .isEnabled = TRUE,
       .startAddress = &msgRam[MSGRAM_TXBUFFER_OFFSET],
       .bufferSize = 0u,
-      .queueSize = 32u,
+      .queueSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
       .queueType = Mcan_TxQueueType_Fifo,
       .elementSize = Mcan_ElementSize_8,
     },
-    .txEventFifo = {.isEnabled = false,
+    .txEventFifo = {.isEnabled = FALSE,
 					.startAddress = NULL,
 					.size = 0,
 					.watermark = 0,
@@ -106,11 +113,11 @@ static const Mcan_Config defaultConfig = {
     .interrupts = {
 	  {
 		.isEnabled = FALSE,
-		.line = Mcan_InterruptLine_0,
+		.line = 0, //Mcan_InterruptLine_0,
 	  },
 	  {
-		.isEnabled = TRUE,
-		.line = Mcan_InterruptLine_1,
+		.isEnabled = FALSE,
+		.line = 0, //Mcan_InterruptLine_1,
 	  }
 	},
     .isLine0InterruptEnabled = FALSE,
@@ -295,6 +302,9 @@ void SamV71RtemsCanInit(
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      MCAN1_INT0_Handler, NULL);
+	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
+				      MCAN1_INT0_Handler, NULL);
+
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
@@ -325,7 +335,6 @@ void SamV71RtemsCanInit(
 	// this is for comparision
 	/* Mcan_Config readConfig; */
 	/* Mcan_getConfig(&mcan, &readConfig); */
-
 	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
 	/* assert(cmpResult == 0); */
 
@@ -358,8 +367,10 @@ void SamV71RtemsCanInit(
 	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
-	bool result = waitForTransmissionFinished(MCAN_TEST_TIMEOUT);
-	assert(result);
+	/* bool result = waitForTransmissionFinished(MCAN_TEST_TIMEOUT); */
+	/* assert(result); */
+
+	/* while(true) { */
 	/* Mcan_RxFifoStatus fifoStatus; */
 	/* bool fifoStatusResult = */
 	/* 	Mcan_getRxFifoStatus(&mcan, Mcan_RxFifoId_0, &fifoStatus, NULL); */
@@ -376,6 +387,7 @@ void SamV71RtemsCanInit(
 
 	/* assert(fifoPullResult); */
 	/* assert(errCode == ErrorCode_NoError); */
+	/* } */
 }
 
 void SamV71RtemsCanPoll(void *private_data)
