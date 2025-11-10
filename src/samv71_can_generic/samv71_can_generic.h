@@ -22,9 +22,31 @@
 
 #include <drivers_config.h>
 #include <system_spec.h>
+#include <Mcan/Mcan.h>
+#include <Pio/Pio.h>
 
-typedef struct {
-	int dummy;
+#define MSGRAM_SIZE 512
+#define MSGRAM_STDID_FILTER_OFFSET 0
+#define MSGRAM_STDID_FILTER_SIZE 0
+#define MSGRAM_EXTID_FILTER_OFFSET 0
+#define MSGRAM_EXTID_FILTER_SIZE 0
+#define MSGRAM_RXFIFO0_OFFSET 0
+#define MSGRAM_RXFIFO0_SIZE 384
+#define MSGRAM_RXFIFO1_OFFSET 384
+#define MSGRAM_RXFIFO1_SIZE 0
+#define MSGRAM_RXBUFFER_OFFSET 384
+#define MSGRAM_RXBUFFER_SIZE 0
+#define MSGRAM_TXEVENTINFO_OFFSET 384
+#define MSGRAM_TXEVENTINFO_SIZE 0
+#define MSGRAM_TXBUFFER_OFFSET 384
+#define MSGRAM_TXBUFFER_SIZE 128
+
+typedef struct __attribute__((aligned(4096))) {
+	uint32_t msgRam[MSGRAM_SIZE];
+	enum SystemBus m_bus_id;
+	Mcan mcan;
+	Pio pioCanTx;
+
 } samv71_can_generic_private_data;
 
 void SamV71RtemsCanInit(

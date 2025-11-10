@@ -11,34 +11,15 @@
 #include <Pmc/Pmc.h>
 #include <Pio/Pio.h>
 
+#include <Broker/Broker.h>
 #include <SamV71Core/SamV71Core.h>
-
-#define MSGRAM_SIZE 512
-#define MSGRAM_STDID_FILTER_OFFSET 0
-#define MSGRAM_STDID_FILTER_SIZE 0
-#define MSGRAM_EXTID_FILTER_OFFSET 0
-#define MSGRAM_EXTID_FILTER_SIZE 0
-#define MSGRAM_RXFIFO0_OFFSET 0
-#define MSGRAM_RXFIFO0_SIZE 384
-#define MSGRAM_RXFIFO1_OFFSET 384
-#define MSGRAM_RXFIFO1_SIZE 0
-#define MSGRAM_RXBUFFER_OFFSET 384
-#define MSGRAM_RXBUFFER_SIZE 0
-#define MSGRAM_TXEVENTINFO_OFFSET 384
-#define MSGRAM_TXEVENTINFO_SIZE 0
-#define MSGRAM_TXBUFFER_OFFSET 384
-#define MSGRAM_TXBUFFER_SIZE 128
 
 // TODO temporary
 #define MCAN_TEST_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
 
-static __attribute__((aligned(4096))) uint32_t msgRam[MSGRAM_SIZE];
-
-static Mcan mcan;
-
 static const Mcan_Config defaultConfig = {
-    .msgRamBaseAddress = msgRam,
+    .msgRamBaseAddress = NULL,
     .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest,
     .isFdEnabled = FALSE,
     .nominalBitTiming = {
@@ -79,7 +60,7 @@ static const Mcan_Config defaultConfig = {
     },
     .rxFifo0 = {
       .isEnabled = TRUE,
-      .startAddress = &msgRam[MSGRAM_RXFIFO0_OFFSET],
+      .startAddress = NULL,
       .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
       .watermark = 0u,
       .mode = Mcan_RxFifoOperationMode_Blocking,
@@ -87,19 +68,19 @@ static const Mcan_Config defaultConfig = {
     },
     .rxFifo1 = {
       .isEnabled = FALSE,
-      .startAddress = &msgRam[MSGRAM_RXFIFO1_OFFSET],
+      .startAddress = NULL,
       .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
       .watermark = 0u,
       .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
     },
     .rxBuffer = {
-      .startAddress = &msgRam[MSGRAM_RXBUFFER_OFFSET],
+      .startAddress = NULL,
       .elementSize = Mcan_ElementSize_8,
     },
     .txBuffer = {
       .isEnabled = TRUE,
-      .startAddress = &msgRam[MSGRAM_TXBUFFER_OFFSET],
+      .startAddress = NULL,
       .bufferSize = 0u,
       .queueSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
       .queueType = Mcan_TxQueueType_Fifo,
@@ -155,23 +136,24 @@ static bool timeoutOccurredIrqCalled = false;
 
 static void MCAN1_INT0_Handler(void)
 {
-	Mcan_InterruptStatus status;
-	Mcan_getInterruptStatus(&mcan, &status);
-	if (status.hasTcOccurred) {
-		txCompleteIrqCalled = true;
-	}
-	if (status.hasRf0wOccurred) {
-		rxWatermarkIrqCalled = true;
-	}
-	if (status.hasTooOccurred) {
-		timeoutOccurredIrqCalled = true;
-	}
+	/* Mcan_InterruptStatus status; */
+	/* Mcan_getInterruptStatus(&mcan, &status); */
+	/* if (status.hasTcOccurred) { */
+	/* 	txCompleteIrqCalled = true; */
+	/* } */
+	/* if (status.hasRf0wOccurred) { */
+	/* 	rxWatermarkIrqCalled = true; */
+	/* } */
+	/* if (status.hasTooOccurred) { */
+	/* 	timeoutOccurredIrqCalled = true; */
+	/* } */
 }
 
-static bool waitForTransmissionFinished(uint32_t timeout, const uint8_t index)
+static bool waitForTransmissionFinished(Mcan *mcan, uint32_t timeout,
+					const uint8_t index)
 {
 	for (uint32_t counter = 0; counter < timeout; ++counter) {
-		if (Mcan_txBufferIsTransmissionFinished(&mcan, index)) {
+		if (Mcan_txBufferIsTransmissionFinished(mcan, index)) {
 			return true;
 		}
 	}
@@ -185,11 +167,11 @@ static void fillMsgData(uint8_t *txData, uint8_t bytesCount)
 	}
 }
 
-static void configurePioCan0()
+static void configurePioCan0(Pio *pio)
 {
-	static Pio pioCanTx;
+	/* static Pio pioCanTx; */
 	ErrorCode errorCode = 0;
-	bool pioStatus = Pio_init(Pio_Port_B, &pioCanTx, &errorCode);
+	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 	//Pio_Port_Config pioCanTxConfig = {
@@ -207,8 +189,8 @@ static void configurePioCan0()
 	//.debounceFilterDiv = 0,
 	//};
 	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
-	pioStatus = Pio_setPinsConfig(&pioCanTx, PIO_PIN_2 | PIO_PIN_2, &pioCanTxConfig,
-				      &errorCode);
+	pioStatus = Pio_setPinsConfig(pio, PIO_PIN_2 | PIO_PIN_2,
+				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 
@@ -235,14 +217,14 @@ static void configurePioCan0()
 	/* 			      &errorCode); */
 	/* assert(pioStatus); */
 	/* assert(errorCode == ErrorCode_NoError); */
-    SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 }
 
-static void configurePioCan1()
+static void configurePioCan1(Pio *pio)
 {
-	static Pio pioCanTx;
+	/* static Pio pioCanTx; */
 	ErrorCode errorCode = 0;
-	bool pioStatus = Pio_init(Pio_Port_C, &pioCanTx, &errorCode);
+	bool pioStatus = Pio_init(Pio_Port_C, pio, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 	/* Pio_Port_Config pioCanTxConfig = { */
@@ -260,8 +242,8 @@ static void configurePioCan1()
 	/*   .debounceFilterDiv = 0, */
 	/* }; */
 	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
-	pioStatus = Pio_setPinsConfig(&pioCanTx, PIO_PIN_14 | PIO_PIN_12, &pioCanTxConfig,
-				      &errorCode);
+	pioStatus = Pio_setPinsConfig(pio, PIO_PIN_14 | PIO_PIN_12,
+				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
 
@@ -289,13 +271,8 @@ static void configurePioCan1()
 	/* assert(pioStatus); */
 	/* assert(errorCode == ErrorCode_NoError); */
 
-
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
-
 }
-
-static void gotMsg(void)
-{}
 
 void SamV71RtemsCanInit(
 	void *private_data, const enum SystemBus bus_id,
@@ -303,18 +280,23 @@ void SamV71RtemsCanInit(
 	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
 	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
 {
-	/* const Pmc_PckConfig pckConfig = { */
-	/* 	.isEnabled = true, */
-	/* 	.src = Pmc_PckSrc_Pllack, */
-	/* 	.presc = 14, */
-	/* }; */
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
 
-	/* bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig, */
-	/* 					    PMC_DEFAULT_TIMEOUT, NULL); */
-	/* assert(setCfgResult); */
+	self->m_bus_id = bus_id;
 
-    	//configurePioCan0();
-	configurePioCan1();
+	const Pmc_PckConfig pckConfig = {
+		.isEnabled = true,
+		.src = Pmc_PckSrc_Pllack,
+		.presc = 14,
+	};
+
+	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
+						    PMC_DEFAULT_TIMEOUT, NULL);
+	assert(setCfgResult);
+
+	//configurePioCan0();
+	configurePioCan1(&self->pioCanTx);
 
 	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0", */
 	/* 			      MCAN1_INT0_Handler, NULL); */
@@ -324,14 +306,20 @@ void SamV71RtemsCanInit(
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 
-	memset(msgRam, 0, sizeof(msgRam));
-	Mcan_init(&mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
+	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
+	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 
-	const Mcan_ElementSize testElementSize = Mcan_ElementSize_8;
+	/* const Mcan_ElementSize testElementSize = Mcan_ElementSize_8; */
 
 	// possibly here is something more
 
 	Mcan_Config conf = defaultConfig;
+	conf.msgRamBaseAddress = self->msgRam;
+	conf.rxFifo0.startAddress = &self->msgRam[MSGRAM_RXFIFO0_OFFSET];
+	conf.rxFifo1.startAddress = &self->msgRam[MSGRAM_RXFIFO1_OFFSET];
+	conf.rxBuffer.startAddress = &self->msgRam[MSGRAM_RXBUFFER_OFFSET];
+	conf.txBuffer.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
+
 	/* conf.standardIdFilter.isIdRejected = TRUE; */
 	/* conf.extendedIdFilter.isIdRejected = TRUE; */
 	/* conf.extendedIdFilter.nonMatchingPolicy = */
@@ -342,16 +330,55 @@ void SamV71RtemsCanInit(
 
 	ErrorCode errCode = ErrorCode_NoError;
 	bool setConfResult =
-		Mcan_setConfig(&mcan, &conf, CONFIG_TIMEOUT, &errCode);
+		Mcan_setConfig(&self->mcan, &conf, CONFIG_TIMEOUT, &errCode);
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
-
 
 	// this is for comparision
 	/* Mcan_Config readConfig; */
 	/* Mcan_getConfig(&mcan, &readConfig); */
 	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
 	/* assert(cmpResult == 0); */
+}
+
+void SamV71RtemsCanPoll(void *private_data)
+{
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+	ErrorCode errCode = ErrorCode_NoError;
+
+	while (true) {
+		Mcan_RxFifoStatus fifoStatus;
+		bool fifoStatusResult = Mcan_getRxFifoStatus(
+			&self->mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);
+		assert(fifoStatusResult);
+		if (fifoStatus.count > 0) {
+			uint8_t rxData[64];
+			Mcan_RxElement rxElement;
+			rxElement.data = rxData;
+			bool fifoPullResult =
+				Mcan_rxFifoPull(&self->mcan, Mcan_RxFifoId_0,
+						&rxElement, &errCode);
+
+			assert(fifoPullResult);
+			assert(errCode == ErrorCode_NoError);
+
+			gotMsg();
+			Broker_receive_packet(self->m_bus_id, rxData,
+					      rxElement.dataSize);
+		}
+	}
+}
+
+void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
+			const size_t length)
+{
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+
+	ErrorCode errCode = ErrorCode_NoError;
+
+	const Mcan_ElementSize testElementSize = Mcan_ElementSize_8;
 
 	const uint8_t bytesCount = getElementBytesCount(testElementSize);
 
@@ -362,13 +389,13 @@ void SamV71RtemsCanInit(
 		.esiFlag = Mcan_ElementEsi_Dominant,
 		.idType = Mcan_IdType_Standard,
 		.frameType = Mcan_FrameType_Data,
-		.id = 3,
+		.id = 77,
 		.marker = 0,
 		.isTxEventStored = FALSE,
 		.isCanFdFormatEnabled = FALSE,
 		.isBitRateSwitchingEnabled = FALSE,
-		.dataSize = bytesCount,
-		.data = txData,
+		.dataSize = length,
+		.data = data,
 		.isInterruptEnabled = FALSE,
 	};
 
@@ -378,38 +405,10 @@ void SamV71RtemsCanInit(
 
 	uint8_t pushIndex;
 	bool pushResult =
-		Mcan_txQueuePush(&mcan, txElement, &pushIndex, &errCode);
+		Mcan_txQueuePush(&self->mcan, txElement, &pushIndex, &errCode);
 	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
-	bool result = waitForTransmissionFinished(MCAN_TEST_TIMEOUT, pushIndex);
-	assert(result);
-
-	while (true) {
-		Mcan_RxFifoStatus fifoStatus;
-		bool fifoStatusResult = Mcan_getRxFifoStatus(
-			&mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);
-		assert(fifoStatusResult);
-		if (fifoStatus.count > 0) {
-			uint8_t rxData[64];
-			Mcan_RxElement rxElement;
-			rxElement.data = rxData;
-			bool fifoPullResult = Mcan_rxFifoPull(
-				&mcan, Mcan_RxFifoId_0, &rxElement, &errCode);
-
-			assert(fifoPullResult);
-			assert(errCode == ErrorCode_NoError);
-
-			gotMsg();
-		}
-	}
-}
-
-void SamV71RtemsCanPoll(void *private_data)
-{
-}
-
-void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
-			const size_t length)
-{
+	/* bool result = waitForTransmissionFinished(&self->mcan, MCAN_TEST_TIMEOUT, pushIndex); */
+	/* assert(result); */
 }
