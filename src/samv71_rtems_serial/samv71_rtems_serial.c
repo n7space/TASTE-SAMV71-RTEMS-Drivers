@@ -758,8 +758,9 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 	while (index < length) {
 		packetLength = Escaper_encode_packet(&self->m_escaper, data,
 						     length, &index);
-		rtems_semaphore_obtain(self->m_tx_semaphore, RTEMS_WAIT,
-				       RTEMS_NO_TIMEOUT);
+		const rtems_status_code obtainResult = rtems_semaphore_obtain(
+			self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+		assert(obtainResult == RTEMS_SUCCESSFUL);
 		SamV71RtemsSerialInit_uart_write(
 			&self->m_hal_uart,
 			(uint8_t *const)&self->m_encoded_packet_buffer,
