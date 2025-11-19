@@ -20,7 +20,8 @@
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
-    .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest,
+    /* .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest, */
+    .mode = Mcan_Mode_InternalLoopBackTest,
     .isFdEnabled = FALSE,
     .nominalBitTiming = {
       .bitRatePrescaler = 0u,
@@ -71,11 +72,7 @@ static const Mcan_Config defaultConfig = {
     /*   .filterListSize = 0u, */
     /* }, */
     .rxFifo0 = {
-
-
       .isEnabled = TRUE,
-
-
       .startAddress = NULL,
 
 
@@ -447,6 +444,28 @@ void SamV71RtemsCanInit(
 	/* Mcan_getConfig(&mcan, &readConfig); */
 	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
 	/* assert(cmpResult == 0); */
+
+  	rtems_task_config taskConfig = {
+		.name = rtems_build_name('p', 'o', 'l', 'l'),
+		.initial_priority = 1,
+		.storage_area = self->m_task_buffer,
+		.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE,
+		.maximum_thread_local_storage_size =
+			Can_SAMV71_RTEMS_UART_TLS_SIZE,
+		.storage_free = NULL,
+		.initial_modes = RTEMS_PREEMPT,
+		.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
+	};
+
+	const rtems_status_code taskConstructionResult =
+		rtems_task_construct(&taskConfig, &self->m_task);
+	assert(taskConstructionResult == RTEMS_SUCCESSFUL);
+
+	const rtems_status_code taskStartStatus = rtems_task_start(
+		self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll,
+		(rtems_task_argument)self);
+	assert(taskStartStatus == RTEMS_SUCCESSFUL);
+
 }
 
 void SamV71RtemsCanPoll(void *private_data)

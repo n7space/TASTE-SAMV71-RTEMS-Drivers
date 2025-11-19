@@ -19,6 +19,7 @@
 
 #ifndef SAMV71_RTEMS_CAN_H
 #define SAMV71_RTEMS_CAN_H
+#include <rtems.h>
 
 #include <drivers_config.h>
 #include <system_spec.h>
@@ -67,12 +68,23 @@
 #define MSGRAM_TXEVENTINFO_OFFSET 400
 #define MSGRAM_TXBUFFER_OFFSET 432
 
+#define Can_SAMV71_RTEMS_UART_TLS_SIZE 16384
+#define Can_SAMV71_RTEMS_STACK_SIZE \
+	(1024 > RTEMS_MINIMUM_STACK_SIZE ? 1024 : RTEMS_MINIMUM_STACK_SIZE)
+#define Can_SAMV71_RTEMS_TASK_BUFFER_SIZE                                \
+	(RTEMS_TASK_STORAGE_SIZE(Can_SAMV71_RTEMS_STACK_SIZE +           \
+					 Can_SAMV71_RTEMS_UART_TLS_SIZE, \
+				 RTEMS_FLOATING_POINT))
+
+
 typedef struct __attribute__((aligned(4096))) {
 	uint32_t msgRam[MSGRAM_SIZE];
 	enum SystemBus m_bus_id;
 	Mcan mcan;
 	Pio pioCanTx;
-
+	rtems_id m_task;
+	RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
+	char m_task_buffer[Can_SAMV71_RTEMS_TASK_BUFFER_SIZE];
 } samv71_can_generic_private_data;
 
 void SamV71RtemsCanInit(
