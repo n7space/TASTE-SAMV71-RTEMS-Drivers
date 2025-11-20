@@ -20,8 +20,8 @@
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
-    /* .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest, */
-    .mode = Mcan_Mode_InternalLoopBackTest,
+    .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest,
+    /* .mode = Mcan_Mode_InternalLoopBackTest, */
     .isFdEnabled = FALSE,
     .nominalBitTiming = {
       .bitRatePrescaler = 0u,
@@ -48,167 +48,62 @@ static const Mcan_Config defaultConfig = {
       .period = 0u,
     },
     .standardIdFilter = {
-      .isIdRejected = TRUE,
+      .isIdRejected = FALSE,
       .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
       .filterListAddress = NULL,
       .filterListSize = 0u,
     },
     .extendedIdFilter = {
-      .isIdRejected = TRUE,
+      .isIdRejected = FALSE,
       .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
       .filterListAddress = NULL,
       .filterListSize = 0u,
     },
-    /* .standardIdFilter = { */
-    /*   .isIdRejected = FALSE, */
-    /*   .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0, */
-    /*   .filterListAddress = NULL, */
-    /*   .filterListSize = 0u, */
-    /* }, */
-    /* .extendedIdFilter = { */
-    /*   .isIdRejected = TRUE, */
-    /*   .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0, */
-    /*   .filterListAddress = NULL, */
-    /*   .filterListSize = 0u, */
-    /* }, */
     .rxFifo0 = {
       .isEnabled = TRUE,
       .startAddress = NULL,
-
-
-      .size = 1u,
-
-
+      .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
       .watermark = 0u,
-
-
-      .mode = Mcan_RxFifoOperationMode_Overwrite,
-
-
+      .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
-
-
     },
-
-
     .rxFifo1 = {
-
-
-      .isEnabled = TRUE,
-
-
+      .isEnabled = FALSE,
       .startAddress = NULL,
-
-
-      .size = 1u,
-
-
+      .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
       .watermark = 0u,
-
-
-      .mode = Mcan_RxFifoOperationMode_Overwrite,
-
-
+      .mode = Mcan_RxFifoOperationMode_Blocking,
       .elementSize = Mcan_ElementSize_8,
-
-
     },
-
-
     .rxBuffer = {
-
-
       .startAddress = NULL,
-
-
       .elementSize = Mcan_ElementSize_8,
-
-
     },
-
-
     .txBuffer = {
-
-
       .isEnabled = TRUE,
-
-
       .startAddress = NULL,
-
-
-      .bufferSize = 1u,
-
-
-      .queueSize = 0u,
-
-
+      .bufferSize = 0u,
+      .queueSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
       .queueType = Mcan_TxQueueType_Fifo,
-
-
       .elementSize = Mcan_ElementSize_8,
-
-
     },
-
-
-    .txEventFifo = {.isEnabled = false,
-
-
+    .txEventFifo = {.isEnabled = FALSE,
 					.startAddress = NULL,
-
-
 					.size = 0,
-
-
 					.watermark = 0,
-
-
 	},
-    /* .rxFifo0 = { */
-    /*   .isEnabled = TRUE, */
-    /*   .startAddress = NULL, */
-    /*   .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t), */
-    /*   .watermark = 0u, */
-    /*   .mode = Mcan_RxFifoOperationMode_Blocking, */
-    /*   .elementSize = Mcan_ElementSize_8, */
-    /* }, */
-    /* .rxFifo1 = { */
-    /*   .isEnabled = FALSE, */
-    /*   .startAddress = NULL, */
-    /*   .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t), */
-    /*   .watermark = 0u, */
-    /*   .mode = Mcan_RxFifoOperationMode_Blocking, */
-    /*   .elementSize = Mcan_ElementSize_8, */
-    /* }, */
-    /* .rxBuffer = { */
-    /*   .startAddress = NULL, */
-    /*   .elementSize = Mcan_ElementSize_8, */
-    /* }, */
-    /* .txBuffer = { */
-    /*   .isEnabled = TRUE, */
-    /*   .startAddress = NULL, */
-    /*   .bufferSize = 2u, */
-    /*   .queueSize = 0, //MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t), */
-    /*   .queueType = Mcan_TxQueueType_Fifo, */
-    /*   .elementSize = Mcan_ElementSize_8, */
-    /* }, */
-    /* .txEventFifo = {.isEnabled = FALSE, */
-	/* 				.startAddress = NULL, */
-	/* 				.size = 0, */
-	/* 				.watermark = 0, */
-	/* }, */
     .interrupts = {
 	  {
-		.isEnabled = FALSE,
-		.line = 0, //Mcan_InterruptLine_0,
+		.isEnabled = TRUE,
+		.line = Mcan_InterruptLine_0,
 	  },
 	  {
-		.isEnabled = TRUE,
+		.isEnabled = FALSE,
 		.line = Mcan_InterruptLine_1,
 	  }
 	},
-    .isLine0InterruptEnabled = FALSE,
-    .isLine1InterruptEnabled = TRUE,
+    .isLine0InterruptEnabled = TRUE,
+    .isLine1InterruptEnabled = FALSE,
     .wdtCounter = 0u,
   };
 
@@ -239,6 +134,21 @@ static uint8_t getElementBytesCount(const Mcan_ElementSize elementSize)
 static bool txCompleteIrqCalled = false;
 static bool rxWatermarkIrqCalled = false;
 static bool timeoutOccurredIrqCalled = false;
+
+static void MCAN0_INT0_Handler(void)
+{
+	/* Mcan_InterruptStatus status; */
+	/* Mcan_getInterruptStatus(&mcan, &status); */
+	/* if (status.hasTcOccurred) { */
+	/* 	txCompleteIrqCalled = true; */
+	/* } */
+	/* if (status.hasRf0wOccurred) { */
+	/* 	rxWatermarkIrqCalled = true; */
+	/* } */
+	/* if (status.hasTooOccurred) { */
+	/* 	timeoutOccurredIrqCalled = true; */
+	/* } */
+}
 
 static void MCAN1_INT0_Handler(void)
 {
@@ -276,10 +186,6 @@ static void fillMsgData(uint8_t *txData, uint8_t bytesCount)
 static void configurePioCan0(Pio *pio)
 {
 	/* static Pio pioCanTx; */
-	ErrorCode errorCode = 0;
-	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
-	assert(pioStatus);
-	assert(errorCode == ErrorCode_NoError);
 	//Pio_Port_Config pioCanTxConfig = {
 	//.pins = PIO_PIN_2,
 	Pio_Pin_Config pioCanTxConfig = {
@@ -295,6 +201,11 @@ static void configurePioCan0(Pio *pio)
 	//.debounceFilterDiv = 0,
 	//};
 	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
+  	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
+	ErrorCode errorCode = 0;
+	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
+	assert(pioStatus);
+	assert(errorCode == ErrorCode_NoError);
 	pioStatus = Pio_setPinsConfig(pio, PIO_PIN_2 | PIO_PIN_2,
 				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
@@ -306,16 +217,16 @@ static void configurePioCan0(Pio *pio)
 	/* assert(errorCode == ErrorCode_NoError); */
 	/* Pio_Port_Config pioCanRxConfig = { */
 	/* .pins = PIO_PIN_3, */
-	const Pio_Pin_Config pioCanRxConfig = {
-		.control = Pio_Control_PeripheralA,
-		.direction = Pio_Direction_Output,
-		.pull = Pio_Pull_Up,
-		.filter = Pio_Filter_None,
-		.isMultiDriveEnabled = FALSE,
-		.irq = Pio_Irq_None,
-		.driveStrength = Pio_Drive_Low,
-		.isSchmittTriggerDisabled = FALSE,
-	};
+	/* const Pio_Pin_Config pioCanRxConfig = { */
+	/* 	.control = Pio_Control_PeripheralA, */
+	/* 	.direction = Pio_Direction_Output, */
+	/* 	.pull = Pio_Pull_Up, */
+	/* 	.filter = Pio_Filter_None, */
+	/* 	.isMultiDriveEnabled = FALSE, */
+	/* 	.irq = Pio_Irq_None, */
+	/* 	.driveStrength = Pio_Drive_Low, */
+	/* 	.isSchmittTriggerDisabled = FALSE, */
+	/* }; */
 	/* 	.debounceFilterDiv = 0, */
 	/* }; */
 	//pioStatus = Pio_setPortConfig(&pioCanRx, &pioCanRxConfig, &errorCode);
@@ -323,7 +234,6 @@ static void configurePioCan0(Pio *pio)
 	/* 			      &errorCode); */
 	/* assert(pioStatus); */
 	/* assert(errorCode == ErrorCode_NoError); */
-	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 }
 
 static void configurePioCan1(Pio *pio)
@@ -390,7 +300,7 @@ void SamV71RtemsCanInit(
 
 	self->m_bus_id = bus_id;
 
-	//configurePioCan0();
+	/* configurePioCan0(&self->pioCanTx); */
 	configurePioCan1(&self->pioCanTx);
 
 	const Pmc_PckConfig pckConfig = {
@@ -403,15 +313,16 @@ void SamV71RtemsCanInit(
 						    PMC_DEFAULT_TIMEOUT, NULL);
 	assert(setCfgResult);
 
-	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0", */
-	/* 			      MCAN1_INT0_Handler, NULL); */
+	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
+				      MCAN1_INT0_Handler, NULL);
 	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0", */
-	/* 			      MCAN1_INT0_Handler, NULL); */
+	/* 			      MCAN0_INT0_Handler, NULL); */
 
 	/* SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0); */
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
+	/* Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0)); */
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 
 	/* const Mcan_ElementSize testElementSize = Mcan_ElementSize_8; */
@@ -439,32 +350,36 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
-	// this is for comparision
+	/* this is for comparision */
 	/* Mcan_Config readConfig; */
 	/* Mcan_getConfig(&mcan, &readConfig); */
 	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
 	/* assert(cmpResult == 0); */
 
-  	rtems_task_config taskConfig = {
-		.name = rtems_build_name('p', 'o', 'l', 'l'),
-		.initial_priority = 1,
-		.storage_area = self->m_task_buffer,
-		.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE,
-		.maximum_thread_local_storage_size =
-			Can_SAMV71_RTEMS_UART_TLS_SIZE,
-		.storage_free = NULL,
-		.initial_modes = RTEMS_PREEMPT,
-		.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
-	};
+	/* for(int i = 0; i <MSGRAM_SIZE; ++i) { */
+	/*   self->msgRam[i] = 0xff; */
+	/* } */
 
-	const rtems_status_code taskConstructionResult =
-		rtems_task_construct(&taskConfig, &self->m_task);
-	assert(taskConstructionResult == RTEMS_SUCCESSFUL);
+  	/* rtems_task_config taskConfig = { */
+	/* 	.name = rtems_build_name('p', 'o', 'l', 'l'), */
+	/* 	.initial_priority = 1, */
+	/* 	.storage_area = self->m_task_buffer, */
+	/* 	.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE, */
+	/* 	.maximum_thread_local_storage_size = */
+	/* 		Can_SAMV71_RTEMS_UART_TLS_SIZE, */
+	/* 	.storage_free = NULL, */
+	/* 	.initial_modes = RTEMS_PREEMPT, */
+	/* 	.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT */
+	/* }; */
 
-	const rtems_status_code taskStartStatus = rtems_task_start(
-		self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll,
-		(rtems_task_argument)self);
-	assert(taskStartStatus == RTEMS_SUCCESSFUL);
+	/* const rtems_status_code taskConstructionResult = */
+	/* 	rtems_task_construct(&taskConfig, &self->m_task); */
+	/* assert(taskConstructionResult == RTEMS_SUCCESSFUL); */
+
+	/* const rtems_status_code taskStartStatus = rtems_task_start( */
+	/* 	self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll, */
+	/* 	(rtems_task_argument)self); */
+	/* assert(taskStartStatus == RTEMS_SUCCESSFUL); */
 
 }
 
