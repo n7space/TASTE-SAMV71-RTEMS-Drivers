@@ -20,8 +20,7 @@
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
-    .mode = Mcan_Mode_Normal, // Mcan_Mode_InternalLoopBackTest,
-    /* .mode = Mcan_Mode_InternalLoopBackTest, */
+    .mode = Mcan_Mode_Normal,
     .isFdEnabled = FALSE,
     .nominalBitTiming = {
       .bitRatePrescaler = 0u,
@@ -194,9 +193,6 @@ static void fillMsgData(uint8_t *txData, uint8_t bytesCount)
 
 static void configurePioCan0(Pio *pio)
 {
-	/* static Pio pioCanTx; */
-	//Pio_Port_Config pioCanTxConfig = {
-	//.pins = PIO_PIN_2,
 	Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralA,
 		.direction = Pio_Direction_Output,
@@ -207,9 +203,6 @@ static void configurePioCan0(Pio *pio)
 		.driveStrength = Pio_Drive_Low,
 		.isSchmittTriggerDisabled = FALSE,
 	};
-	//.debounceFilterDiv = 0,
-	//};
-	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 	ErrorCode errorCode = 0;
 	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
@@ -219,37 +212,10 @@ static void configurePioCan0(Pio *pio)
 				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
-
-	/* Pio pioCanRx; */
-	/* pioStatus = Pio_init(Pio_Port_B, &pioCanTx, &errorCode); */
-	/* assert(pioStatus); */
-	/* assert(errorCode == ErrorCode_NoError); */
-	/* Pio_Port_Config pioCanRxConfig = { */
-	/* .pins = PIO_PIN_3, */
-	/* const Pio_Pin_Config pioCanRxConfig = { */
-	/* 	.control = Pio_Control_PeripheralA, */
-	/* 	.direction = Pio_Direction_Output, */
-	/* 	.pull = Pio_Pull_Up, */
-	/* 	.filter = Pio_Filter_None, */
-	/* 	.isMultiDriveEnabled = FALSE, */
-	/* 	.irq = Pio_Irq_None, */
-	/* 	.driveStrength = Pio_Drive_Low, */
-	/* 	.isSchmittTriggerDisabled = FALSE, */
-	/* }; */
-	/* 	.debounceFilterDiv = 0, */
-	/* }; */
-	//pioStatus = Pio_setPortConfig(&pioCanRx, &pioCanRxConfig, &errorCode);
-	/* pioStatus = Pio_setPinsConfig(&pioCanTx, PIO_PIN_3, &pioCanRxConfig, */
-	/* 			      &errorCode); */
-	/* assert(pioStatus); */
-	/* assert(errorCode == ErrorCode_NoError); */
 }
 
 static void configurePioCan1(Pio *pio)
 {
-	/* static Pio pioCanTx; */
-	/* Pio_Port_Config pioCanTxConfig = { */
-	/*   .pins = PIO_PIN_14, */
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralC,
 		.direction = Pio_Direction_Output,
@@ -260,9 +226,6 @@ static void configurePioCan1(Pio *pio)
 		.driveStrength = Pio_Drive_Low,
 		.isSchmittTriggerDisabled = FALSE,
 	};
-	/*   .debounceFilterDiv = 0, */
-	/* }; */
-	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
 	ErrorCode errorCode = 0;
 	bool pioStatus = Pio_init(Pio_Port_C, pio, &errorCode);
@@ -272,30 +235,43 @@ static void configurePioCan1(Pio *pio)
 				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
+}
 
-	/* Pio pioCanRx; */
-	/* pioStatus = Pio_init(Pio_Port_C, &pioCanTx, &errorCode); */
-	/* assert(pioStatus); */
-	/* assert(errorCode == ErrorCode_NoError); */
-	/* Pio_Port_Config pioCanRxConfig = { */
-	/*   .pins = PIO_PIN_12, */
-	/* const Pio_Pin_Config pioCanRxConfig = { */
-	/* 	.control = Pio_Control_PeripheralC, */
-	/* 	.direction = Pio_Direction_Output, */
-	/* 	.pull = Pio_Pull_Up, */
-	/* 	.filter = Pio_Filter_None, */
-	/* 	.isMultiDriveEnabled = FALSE, */
-	/* 	.irq = Pio_Irq_None, */
-	/* 	.driveStrength = Pio_Drive_Low, */
-	/* 	.isSchmittTriggerDisabled = FALSE, */
-	/* }; */
-	/*   .debounceFilterDiv = 0, */
-	/* }; */
-	//pioStatus = Pio_setPortConfig(&pioCanRx, &pioCanRxConfig, &errorCode);
-	/* pioStatus = Pio_setPinsConfig(&pioCanTx, PIO_PIN_12, &pioCanRxConfig, */
-	/* 			      &errorCode); */
-	/* assert(pioStatus); */
-	/* assert(errorCode == ErrorCode_NoError); */
+static void configureMcan0(samv71_can_generic_private_data *self)
+{
+	configurePioCan0(&self->pioCanTx);
+	const Pmc_PckConfig pckConfig = {
+		.isEnabled = true,
+		.src = Pmc_PckSrc_Pllack,
+		.presc = 14,
+	};
+
+	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
+						    PMC_DEFAULT_TIMEOUT, NULL);
+	assert(setCfgResult);
+
+	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
+				      MCAN0_INT0_Handler, self);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
+	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
+}
+
+static void configureMcan1(samv71_can_generic_private_data *self)
+{
+	configurePioCan1(&self->pioCanTx);
+	const Pmc_PckConfig pckConfig = {
+		.isEnabled = true,
+		.src = Pmc_PckSrc_Pllack,
+		.presc = 14,
+	};
+
+	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
+						    PMC_DEFAULT_TIMEOUT, NULL);
+	assert(setCfgResult);
+	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
+				      MCAN1_INT0_Handler, self);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
+	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 }
 
 void SamV71RtemsCanInit(
@@ -307,38 +283,14 @@ void SamV71RtemsCanInit(
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;
 
-	rtems_cache_disable_data();
-
 	self->m_bus_id = bus_id;
 
-	configurePioCan0(&self->pioCanTx);
-	/* configurePioCan1(&self->pioCanTx); */
-
-	const Pmc_PckConfig pckConfig = {
-		.isEnabled = true,
-		.src = Pmc_PckSrc_Pllack,
-		.presc = 14,
-	};
-
-	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
-						    PMC_DEFAULT_TIMEOUT, NULL);
-	assert(setCfgResult);
-
-	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0", */
-	/* 			      MCAN1_INT0_Handler, self); */
-	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
-				      MCAN0_INT0_Handler, self);
-
-	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
-	/* SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1); */
-
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
-	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
-	/* Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1)); */
 
-	/* const Mcan_ElementSize testElementSize = Mcan_ElementSize_8; */
+	/* configureMcan0(self); */
+	configureMcan1(self);
 
-	// possibly here is something more
+	rtems_cache_disable_data();
 
 	Mcan_Config conf = defaultConfig;
 	conf.msgRamBaseAddress = self->msgRam;
@@ -352,14 +304,6 @@ void SamV71RtemsCanInit(
 	conf.txBuffer.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 	conf.txEventFifo.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 
-	/* conf.standardIdFilter.isIdRejected = TRUE; */
-	/* conf.extendedIdFilter.isIdRejected = TRUE; */
-	/* conf.extendedIdFilter.nonMatchingPolicy = */
-	/* 	Mcan_NonMatchingPolicy_RxFifo0; */
-	/* conf.extendedIdFilter.filterListSize = 0; */
-	/* conf.rxFifo0.elementSize = testElementSize; */
-	/* conf.txBuffer.elementSize = testElementSize; */
-
 	ErrorCode errCode = ErrorCode_NoError;
 	bool setConfResult =
 		Mcan_setConfig(&self->mcan, &conf, CONFIG_TIMEOUT, &errCode);
@@ -371,10 +315,6 @@ void SamV71RtemsCanInit(
 	/* Mcan_getConfig(&mcan, &readConfig); */
 	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
 	/* assert(cmpResult == 0); */
-
-	/* for(int i = 0; i <MSGRAM_SIZE; ++i) { */
-	/*   self->msgRam[i] = 0xff; */
-	/* } */
 
 	const rtems_status_code status_code =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
