@@ -150,19 +150,18 @@ static void MCAN0_INT0_Handler(void)
 	/* } */
 }
 
-static void MCAN1_INT0_Handler(void)
+static void MCAN1_INT0_Handler(void *private_data)
 {
-	/* Mcan_InterruptStatus status; */
-	/* Mcan_getInterruptStatus(&mcan, &status); */
-	/* if (status.hasTcOccurred) { */
-	/* 	txCompleteIrqCalled = true; */
-	/* } */
-	/* if (status.hasRf0wOccurred) { */
-	/* 	rxWatermarkIrqCalled = true; */
-	/* } */
-	/* if (status.hasTooOccurred) { */
-	/* 	timeoutOccurredIrqCalled = true; */
-	/* } */
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+
+	Mcan_InterruptStatus status;
+	Mcan_getInterruptStatus(&self->mcan, &status);
+	if (status.hasRf0nOccurred) {
+		rtems_status_code releaseResult =
+			rtems_semaphore_release(self->m_rx_semaphore);
+		assert(releaseResult == RTEMS_SUCCESSFUL);
+	}
 }
 
 static bool waitForTransmissionFinished(Mcan *mcan, uint32_t timeout,
@@ -316,7 +315,7 @@ void SamV71RtemsCanInit(
 	assert(setCfgResult);
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
-				      MCAN1_INT0_Handler, NULL);
+				      MCAN1_INT0_Handler, self);
 	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0", */
 	/* 			      MCAN0_INT0_Handler, NULL); */
 
@@ -367,26 +366,35 @@ void SamV71RtemsCanInit(
 	/*   self->msgRam[i] = 0xff; */
 	/* } */
 
-	/* rtems_task_config taskConfig = { */
-	/* 	.name = rtems_build_name('p', 'o', 'l', 'l'), */
-	/* 	.initial_priority = 1, */
-	/* 	.storage_area = self->m_task_buffer, */
-	/* 	.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE, */
-	/* 	.maximum_thread_local_storage_size = */
-	/* 		Can_SAMV71_RTEMS_UART_TLS_SIZE, */
-	/* 	.storage_free = NULL, */
-	/* 	.initial_modes = RTEMS_PREEMPT, */
-	/* 	.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT */
-	/* }; */
+	const rtems_status_code status_code =
+		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
+				       1, // Initial value, unlocked
+				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
+				       0, // Priority ceiling
+				       &self->m_rx_semaphore);
 
-	/* const rtems_status_code taskConstructionResult = */
-	/* 	rtems_task_construct(&taskConfig, &self->m_task); */
-	/* assert(taskConstructionResult == RTEMS_SUCCESSFUL); */
+	assert(status_code == RTEMS_SUCCESSFUL);
 
-	/* const rtems_status_code taskStartStatus = rtems_task_start( */
-	/* 	self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll, */
-	/* 	(rtems_task_argument)self); */
-	/* assert(taskStartStatus == RTEMS_SUCCESSFUL); */
+	rtems_task_config taskConfig = {
+		.name = rtems_build_name('p', 'o', 'l', 'l'),
+		.initial_priority = 1,
+		.storage_area = self->m_task_buffer,
+		.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE,
+		.maximum_thread_local_storage_size =
+			Can_SAMV71_RTEMS_UART_TLS_SIZE,
+		.storage_free = NULL,
+		.initial_modes = RTEMS_PREEMPT,
+		.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
+	};
+
+	const rtems_status_code taskConstructionResult =
+		rtems_task_construct(&taskConfig, &self->m_task);
+	assert(taskConstructionResult == RTEMS_SUCCESSFUL);
+
+	const rtems_status_code taskStartStatus = rtems_task_start(
+		self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll,
+		(rtems_task_argument)self);
+	assert(taskStartStatus == RTEMS_SUCCESSFUL);
 }
 
 void SamV71RtemsCanPoll(void *private_data)
@@ -396,6 +404,12 @@ void SamV71RtemsCanPoll(void *private_data)
 	ErrorCode errCode = ErrorCode_NoError;
 
 	while (true) {
+		/// Wait for data to arrive. Semaphore will be given
+		rtems_status_code obtainResult = obtainResult =
+			rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT,
+					       RTEMS_NO_TIMEOUT);
+		assert(obtainResult == RTEMS_SUCCESSFUL);
+
 		Mcan_RxFifoStatus fifoStatus;
 		bool fifoStatusResult = Mcan_getRxFifoStatus(
 			&self->mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);

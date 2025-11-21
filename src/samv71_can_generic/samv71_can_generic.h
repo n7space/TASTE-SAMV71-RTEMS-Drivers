@@ -19,6 +19,7 @@
 
 #ifndef SAMV71_RTEMS_CAN_H
 #define SAMV71_RTEMS_CAN_H
+
 #include <rtems.h>
 
 #include <drivers_config.h>
@@ -85,6 +86,7 @@ typedef struct __attribute__((aligned(4096))) {
 	rtems_id m_task;
 	RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
 	char m_task_buffer[Can_SAMV71_RTEMS_TASK_BUFFER_SIZE];
+    rtems_id m_rx_semaphore;
 } samv71_can_generic_private_data;
 
 void SamV71RtemsCanInit(
