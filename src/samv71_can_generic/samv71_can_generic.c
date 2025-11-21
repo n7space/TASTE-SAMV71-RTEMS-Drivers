@@ -327,7 +327,7 @@ void SamV71RtemsCanInit(
 	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0", */
 	/* 			      MCAN1_INT0_Handler, self); */
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
-				      MCAN0_INT0_Handler, NULL);
+				      MCAN0_INT0_Handler, self);
 
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	/* SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1); */
