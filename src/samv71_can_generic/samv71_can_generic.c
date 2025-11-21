@@ -381,8 +381,6 @@ void SamV71RtemsCanPoll(void *private_data)
 	}
 }
 
-static uint32_t messageMark = 0;
-
 void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			const size_t length)
 {
@@ -391,40 +389,19 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 	ErrorCode errCode = ErrorCode_NoError;
 
-	const Mcan_ElementSize testElementSize = Mcan_ElementSize_8;
-
-	uint8_t txData[8] = { 0xc0, messageMark, 0xee, 0xc0,
-			      0xff, 0xee,	 0xbe, 0xef };
-
-	if (messageMark == 31) {
-		messageMark = 0;
-	} else {
-		++messageMark;
-	}
-	/* uint8_t txData[8]; */
-	/* memcpy(txData, data, length); */
-
 	const Mcan_TxElement txElement = {
 		.esiFlag = Mcan_ElementEsi_Dominant,
 		.idType = Mcan_IdType_Standard,
 		.frameType = Mcan_FrameType_Data,
-		/* .id = 77, */
 		.id = 0x7ff,
 		.marker = 0,
 		.isTxEventStored = FALSE,
 		.isCanFdFormatEnabled = FALSE,
 		.isBitRateSwitchingEnabled = FALSE,
 		.dataSize = length,
-		.data = txData,
+		.data = data,
 		.isInterruptEnabled = FALSE,
 	};
-
-	/* bool bufferAddResult = Mcan_txBufferAdd(&mcan, txElement, 0, &errCode); */
-	/* assert(bufferAddResult); */
-	/* assert(errCode == ErrorCode_NoError); */
-
-	Mcan_TxQueueStatus status;
-	Mcan_getTxQueueStatus(&self->mcan, &status);
 
 	uint8_t pushIndex;
 	bool pushResult =
