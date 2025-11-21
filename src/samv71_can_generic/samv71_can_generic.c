@@ -201,7 +201,7 @@ static void configurePioCan0(Pio *pio)
 	//.debounceFilterDiv = 0,
 	//};
 	//pioStatus = Pio_setPortConfig(&pioCanTx, &pioCanTxConfig, &errorCode);
-  	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 	ErrorCode errorCode = 0;
 	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
 	assert(pioStatus);
@@ -298,6 +298,8 @@ void SamV71RtemsCanInit(
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;
 
+	rtems_cache_disable_data();
+
 	self->m_bus_id = bus_id;
 
 	/* configurePioCan0(&self->pioCanTx); */
@@ -331,10 +333,15 @@ void SamV71RtemsCanInit(
 
 	Mcan_Config conf = defaultConfig;
 	conf.msgRamBaseAddress = self->msgRam;
+	conf.standardIdFilter.filterListAddress =
+		&self->msgRam[MSGRAM_STDID_FILTER_OFFSET];
+	conf.extendedIdFilter.filterListAddress =
+		&self->msgRam[MSGRAM_EXTID_FILTER_OFFSET];
 	conf.rxFifo0.startAddress = &self->msgRam[MSGRAM_RXFIFO0_OFFSET];
 	conf.rxFifo1.startAddress = &self->msgRam[MSGRAM_RXFIFO1_OFFSET];
 	conf.rxBuffer.startAddress = &self->msgRam[MSGRAM_RXBUFFER_OFFSET];
 	conf.txBuffer.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
+	conf.txEventFifo.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 
 	/* conf.standardIdFilter.isIdRejected = TRUE; */
 	/* conf.extendedIdFilter.isIdRejected = TRUE; */
@@ -360,7 +367,7 @@ void SamV71RtemsCanInit(
 	/*   self->msgRam[i] = 0xff; */
 	/* } */
 
-  	/* rtems_task_config taskConfig = { */
+	/* rtems_task_config taskConfig = { */
 	/* 	.name = rtems_build_name('p', 'o', 'l', 'l'), */
 	/* 	.initial_priority = 1, */
 	/* 	.storage_area = self->m_task_buffer, */
@@ -380,7 +387,6 @@ void SamV71RtemsCanInit(
 	/* 	self->m_task, (rtems_task_entry)&SamV71RtemsCanPoll, */
 	/* 	(rtems_task_argument)self); */
 	/* assert(taskStartStatus == RTEMS_SUCCESSFUL); */
-
 }
 
 void SamV71RtemsCanPoll(void *private_data)
@@ -411,6 +417,8 @@ void SamV71RtemsCanPoll(void *private_data)
 	}
 }
 
+static uint32_t messageMark = 0;
+
 void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			const size_t length)
 {
@@ -421,7 +429,14 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 	const Mcan_ElementSize testElementSize = Mcan_ElementSize_8;
 
-	uint8_t txData[8] = { 0xc0, 0xff, 0xee, 0xc0, 0xff, 0xee, 0xbe, 0xef };
+	uint8_t txData[8] = { 0xc0, messageMark, 0xee, 0xc0,
+			      0xff, 0xee,	 0xbe, 0xef };
+
+	if (messageMark == 31) {
+		messageMark = 0;
+	} else {
+		++messageMark;
+	}
 	/* uint8_t txData[8]; */
 	/* memcpy(txData, data, length); */
 
