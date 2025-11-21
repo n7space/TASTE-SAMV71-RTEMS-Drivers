@@ -135,7 +135,7 @@ static bool txCompleteIrqCalled = false;
 static bool rxWatermarkIrqCalled = false;
 static bool timeoutOccurredIrqCalled = false;
 
-static void MCAN0_INT0_Handler(void)
+static void MCAN0_INT0_Handler(void *private_data)
 {
 	/* Mcan_InterruptStatus status; */
 	/* Mcan_getInterruptStatus(&mcan, &status); */
@@ -148,6 +148,16 @@ static void MCAN0_INT0_Handler(void)
 	/* if (status.hasTooOccurred) { */
 	/* 	timeoutOccurredIrqCalled = true; */
 	/* } */
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+
+	Mcan_InterruptStatus status;
+	Mcan_getInterruptStatus(&self->mcan, &status);
+	if (status.hasRf0nOccurred) {
+		rtems_status_code releaseResult =
+			rtems_semaphore_release(self->m_rx_semaphore);
+		assert(releaseResult == RTEMS_SUCCESSFUL);
+	}
 }
 
 static void MCAN1_INT0_Handler(void *private_data)
@@ -188,7 +198,7 @@ static void configurePioCan0(Pio *pio)
 	//Pio_Port_Config pioCanTxConfig = {
 	//.pins = PIO_PIN_2,
 	Pio_Pin_Config pioCanTxConfig = {
-		.control = Pio_Control_PeripheralB,
+		.control = Pio_Control_PeripheralA,
 		.direction = Pio_Direction_Output,
 		.pull = Pio_Pull_Up,
 		.filter = Pio_Filter_None,
@@ -301,8 +311,8 @@ void SamV71RtemsCanInit(
 
 	self->m_bus_id = bus_id;
 
-	/* configurePioCan0(&self->pioCanTx); */
-	configurePioCan1(&self->pioCanTx);
+	configurePioCan0(&self->pioCanTx);
+	/* configurePioCan1(&self->pioCanTx); */
 
 	const Pmc_PckConfig pckConfig = {
 		.isEnabled = true,
@@ -314,17 +324,17 @@ void SamV71RtemsCanInit(
 						    PMC_DEFAULT_TIMEOUT, NULL);
 	assert(setCfgResult);
 
-	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
-				      MCAN1_INT0_Handler, self);
-	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0", */
-	/* 			      MCAN0_INT0_Handler, NULL); */
+	/* SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0", */
+	/* 			      MCAN1_INT0_Handler, self); */
+	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
+				      MCAN0_INT0_Handler, NULL);
 
-	/* SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0); */
-	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
+	/* SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1); */
 
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
-	/* Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0)); */
-	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
+	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
+	/* Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1)); */
 
 	/* const Mcan_ElementSize testElementSize = Mcan_ElementSize_8; */
 
