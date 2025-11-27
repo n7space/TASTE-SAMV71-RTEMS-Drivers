@@ -10,7 +10,7 @@ target_sources(SamV71RtemsCan
 
 target_link_libraries(SamV71RtemsCan
   PRIVATE   common_build_options
-  PUBLIC    SAMV71::Runtime
+  PUBLIC    SAMV71::Runtime::Hal
             SAMV71::Runtime::Core
             TASTE::Broker
             TASTE::Escaper)

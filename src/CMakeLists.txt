@@ -1,3 +1,4 @@
 add_subdirectory(RuntimeMocks)
 add_subdirectory(samv71_rtems_serial)
+add_subdirectory(samv71_can_generic)
 add_subdirectory(app)

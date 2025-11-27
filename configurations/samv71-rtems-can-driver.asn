@@ -1,9 +1,53 @@
 SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
-	CAN-Samv71-Rtems-Dummy-T ::= ENUMERATED { ison, isoff }
+    CAN-Samv71-Rtems-Interface-T ::= ENUMERATED {
+        mcan-interface-mcan0,
+        mcan-interface-mcan1
+    }
 
-	CAN-Samv71-Rtems-Conf-T ::= SEQUENCE {
-        dummy CAN-Samv71-Rtems-Dummy-T
+    CAN-Samv71-Rtems-PCK-Clock-Source ::= ENUMERATED {
+        pck-clock-source-main-clock,
+        pck-clock-source-plla-clock
+    }
+
+    CAN-Samv71-Rtems-PCK-Prescaler ::= INTEGER (0 .. 255)
+
+    CAN-Samv71-Rtems-Data-Synchronization-Jump-Width ::= INTEGER (0 .. 7)
+
+    CAN-Samv71-Rtems-Data-Time-Segment-Before-Sample-Point ::= INTEGER (1 .. 31)
+
+    CAN-Samv71-Rtems-Data-Time-Segment-After-Sample-Point ::= INTEGER (0 .. 15)
+
+    CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler ::= INTEGER (0 .. 31)
+
+    CAN-Samv71-Rtems-Data-Structure-T ::= ENUMERATED { plain, can-id-first }
+
+    CAN-Samv71-Rtems-Standard-Can-Id ::= INTEGER (0 .. 2047)
+
+    CAN-Samv71-Rtems-Extended-Can-Id ::= INTEGER (0 .. 536870911)
+
+    CAN-Samv71-Rtems-Can-Id ::= CHOICE {
+        can-id-standard CAN-Samv71-Rtems-Standard-Can-Id,
+        can-id-extended CAN-Samv71-Rtems-Extended-Can-Id
+    }
+
+	CAN-Samv71-Rtems-Dummy ::= BOOLEAN
+
+    CAN-Samv71-Rtems-Address ::= CHOICE {
+        static-can-id CAN-Samv71-Rtems-Can-Id,
+        application-control-can-id CAN-Samv71-Rtems-Dummy
+    }
+
+    CAN-Samv71-Rtems-Conf-T ::= SEQUENCE {
+        can-interface CAN-Samv71-Rtems-Interface-T,
+        bit-rate-prescaller CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler DEFAULT 0,
+        synchronization-jump CAN-Samv71-Rtems-Data-Synchronization-Jump-Width DEFAULT 2,
+        time-segments-after-sample-point CAN-Samv71-Rtems-Data-Time-Segment-After-Sample-Point DEFAULT 2,
+        time-segments-before-sample-point CAN-Samv71-Rtems-Data-Time-Segment-Before-Sample-Point DEFAULT 15,
+
+        pck-source CAN-Samv71-Rtems-PCK-Clock-Source DEFAULT pck-clock-source-plla-clock,
+        pck-prescaler CAN-Samv71-Rtems-PCK-Prescaler DEFAULT 14,
+        address CAN-Samv71-Rtems-Address
     }
 
 END

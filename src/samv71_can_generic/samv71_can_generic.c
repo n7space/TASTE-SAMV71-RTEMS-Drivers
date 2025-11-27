@@ -1,22 +1,24 @@
 #include "samv71_can_generic.h"
 
-#include "Pmc/PmcPeripheralId.h"
-#include "Utils/ErrorCode.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <assert>
 
 #include <Mcan/Mcan.h>
 #include <Nvic/Nvic.h>
 #include <Pmc/Pmc.h>
 #include <Pio/Pio.h>
+#include <Pmc/PmcPeripheralId.h>
+#include <Utils/ErrorCode.h>
 
 #include <Broker/Broker.h>
 #include <SamV71Core/SamV71Core.h>
 
-// TODO temporary
-#define MCAN_TEST_TIMEOUT 100000u
+#define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
+
+static bool is_can_pck_configured = FALSE;
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
@@ -237,7 +239,8 @@ static void configurePioCan1(Pio *pio)
 	assert(errorCode == ErrorCode_NoError);
 }
 
-static void configureMcan0(samv71_can_generic_private_data *self)
+static void configureMcan0(samv71_can_generic_private_data *self,
+			   const CAN_Samv71_Rtems_Conf_T *const config)
 {
 	configurePioCan0(&self->pioCanTx);
 	const Pmc_PckConfig pckConfig = {
@@ -256,7 +259,8 @@ static void configureMcan0(samv71_can_generic_private_data *self)
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
 }
 
-static void configureMcan1(samv71_can_generic_private_data *self)
+static void configureMcan1(samv71_can_generic_private_data *self,
+			   const CAN_Samv71_Rtems_Conf_T *const config)
 {
 	configurePioCan1(&self->pioCanTx);
 	const Pmc_PckConfig pckConfig = {
@@ -283,12 +287,17 @@ void SamV71RtemsCanInit(
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;
 
-	self->m_bus_id = bus_id;
-
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
+	self->m_bus_id = bus_id;
+	self->m_config = device_configuration;
 
-	/* configureMcan0(self); */
-	configureMcan1(self);
+	if (self->m_config->can_interface == mcan_interface_mcan0) {
+		configureMcan0(self, self->m_config);
+	} else if (device_configuration->can_interface == mcan_interface_mcan1) {
+		configureMcan1(self, self->m_config);
+	} else {
+		assert(0);
+	}
 
 	rtems_cache_disable_data();
 
@@ -389,19 +398,38 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 	ErrorCode errCode = ErrorCode_NoError;
 
-	const Mcan_TxElement txElement = {
-		.esiFlag = Mcan_ElementEsi_Dominant,
-		.idType = Mcan_IdType_Standard,
-		.frameType = Mcan_FrameType_Data,
-		.id = 0x7ff,
-		.marker = 0,
-		.isTxEventStored = FALSE,
-		.isCanFdFormatEnabled = FALSE,
-		.isBitRateSwitchingEnabled = FALSE,
-		.dataSize = length,
-		.data = data,
-		.isInterruptEnabled = FALSE,
-	};
+	Mcan_TxElement txElement;
+
+	if (true) { // TODO change
+		txElement.esiFlag = Mcan_ElementEsi_Dominant;
+		txElement.idType = Mcan_IdType_Standard;
+		txElement.frameType = Mcan_FrameType_Data;
+		txElement.id = 0x7ff;
+		txElement.marker = 0;
+		txElement.isTxEventStored = FALSE;
+		txElement.isCanFdFormatEnabled = FALSE;
+		txElement.isBitRateSwitchingEnabled = FALSE;
+		txElement.dataSize = length;
+		txElement.data = data;
+		txElement.isInterruptEnabled = FALSE;
+	} else if (true) { // TODO change
+		const uint32_t id = *(uint32_t *)(data);
+
+		txElement.esiFlag = Mcan_ElementEsi_Dominant;
+		txElement.idType = id & 0xe0000000 ? Mcan_IdType_Extended :
+						     Mcan_IdType_Standard;
+		txElement.frameType = Mcan_FrameType_Data;
+		txElement.id = id & 0x1fffffff >> 29;
+		txElement.marker = 0;
+		txElement.isTxEventStored = FALSE;
+		txElement.isCanFdFormatEnabled = FALSE;
+		txElement.isBitRateSwitchingEnabled = FALSE;
+		txElement.dataSize = length - sizeof(uint32_t);
+		txElement.data = data + sizeof(uint32_t);
+		txElement.isInterruptEnabled = FALSE;
+	} else {
+		assert(0);
+	}
 
 	uint8_t pushIndex;
 	bool pushResult =
@@ -410,6 +438,10 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 	assert(errCode == ErrorCode_NoError);
 
 	bool result = waitForTransmissionFinished(&self->mcan,
-						  MCAN_TEST_TIMEOUT, pushIndex);
+						  MCAN_WAIT_TIMEOUT, pushIndex);
 	assert(result);
 }
+
+// config shall be here
+// so, the europrund
+// escaper

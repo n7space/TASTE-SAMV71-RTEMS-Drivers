@@ -43,32 +43,6 @@
 #define MSGRAM_TXBUFFER_OFFSET 384
 #define MSGRAM_TXBUFFER_SIZE 128
 
-/* #define MSGRAM_SIZE 256 */
-/* #define MSGRAM_STDID_FILTER_OFFSET 0 */
-/* #define MSGRAM_STDID_FILTER_SIZE 0 */
-/* #define MSGRAM_EXTID_FILTER_OFFSET 0 */
-/* #define MSGRAM_EXTID_FILTER_SIZE 4 */
-/* #define MSGRAM_RXFIFO0_OFFSET 16 */
-/* #define MSGRAM_RXFIFO0_SIZE 80 */
-/* #define MSGRAM_RXFIFO1_OFFSET 96 */
-/* #define MSGRAM_RXFIFO1_SIZE 80 */
-/* #define MSGRAM_RXBUFFER_OFFSET 176 */
-/* #define MSGRAM_RXBUFFER_SIZE 0 */
-/* #define MSGRAM_TXEVENTINFO_OFFSET 192 */
-/* #define MSGRAM_TXEVENTINFO_SIZE 0 */
-/* #define MSGRAM_TXBUFFER_OFFSET 224 */
-/* #define MSGRAM_TXBUFFER_SIZE 8 */
-
-/* #define MSGRAM_SIZE 1024 */
-/* #define MSGRAM_STDID_FILTER_OFFSET 0 */
-/* #define MSGRAM_STDID_FILTER_OFFSET 0 */
-/* #define MSGRAM_EXTID_FILTER_OFFSET 4 */
-/* #define MSGRAM_RXFIFO0_OFFSET 16 */
-/* #define MSGRAM_RXFIFO1_OFFSET 144 */
-/* #define MSGRAM_RXBUFFER_OFFSET 272 */
-/* #define MSGRAM_TXEVENTINFO_OFFSET 400 */
-/* #define MSGRAM_TXBUFFER_OFFSET 432 */
-
 #define Can_SAMV71_RTEMS_UART_TLS_SIZE 16384
 #define Can_SAMV71_RTEMS_STACK_SIZE \
 	(1024 > RTEMS_MINIMUM_STACK_SIZE ? 1024 : RTEMS_MINIMUM_STACK_SIZE)
@@ -81,6 +55,7 @@
 typedef struct __attribute__((aligned(4096))) {
 	uint32_t msgRam[MSGRAM_SIZE];
 	enum SystemBus m_bus_id;
+	const CAN_Samv71_Rtems_Conf_T * m_config;
 	Mcan mcan;
 	Pio pioCanTx;
 	rtems_id m_task;
