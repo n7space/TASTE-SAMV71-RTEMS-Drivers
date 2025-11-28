@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <assert>
+#include <assert.h>
 
 #include <Mcan/Mcan.h>
 #include <Nvic/Nvic.h>
@@ -18,7 +18,8 @@
 #define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
 
-static bool is_can_pck_configured = FALSE;
+static bool isMcanPckConfigured = FALSE;
+static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
 
 static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
@@ -132,36 +133,7 @@ static uint8_t getElementBytesCount(const Mcan_ElementSize elementSize)
 	}
 }
 
-static bool txCompleteIrqCalled = false;
-static bool rxWatermarkIrqCalled = false;
-static bool timeoutOccurredIrqCalled = false;
-
-static void MCAN0_INT0_Handler(void *private_data)
-{
-	/* Mcan_InterruptStatus status; */
-	/* Mcan_getInterruptStatus(&mcan, &status); */
-	/* if (status.hasTcOccurred) { */
-	/* 	txCompleteIrqCalled = true; */
-	/* } */
-	/* if (status.hasRf0wOccurred) { */
-	/* 	rxWatermarkIrqCalled = true; */
-	/* } */
-	/* if (status.hasTooOccurred) { */
-	/* 	timeoutOccurredIrqCalled = true; */
-	/* } */
-	samv71_can_generic_private_data *self =
-		(samv71_can_generic_private_data *)private_data;
-
-	Mcan_InterruptStatus status;
-	Mcan_getInterruptStatus(&self->mcan, &status);
-	if (status.hasRf0nOccurred) {
-		rtems_status_code releaseResult =
-			rtems_semaphore_release(self->m_rx_semaphore);
-		assert(releaseResult == RTEMS_SUCCESSFUL);
-	}
-}
-
-static void MCAN1_INT0_Handler(void *private_data)
+static void mcan_int0_Handler(void *private_data)
 {
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;
@@ -184,13 +156,6 @@ static bool waitForTransmissionFinished(Mcan *mcan, uint32_t timeout,
 		}
 	}
 	return false;
-}
-
-static void fillMsgData(uint8_t *txData, uint8_t bytesCount)
-{
-	for (uint8_t i = 0; i < bytesCount; ++i) {
-		txData[i] = i + 1u;
-	}
 }
 
 static void configurePioCan0(Pio *pio)
@@ -239,68 +204,64 @@ static void configurePioCan1(Pio *pio)
 	assert(errorCode == ErrorCode_NoError);
 }
 
-static void configureMcan0(samv71_can_generic_private_data *self,
-			   const CAN_Samv71_Rtems_Conf_T *const config)
+static Pmc_PckSrc getPckSource(const CAN_Samv71_Rtems_Conf_T *const config)
 {
-	configurePioCan0(&self->pioCanTx);
+	switch (config->pck_source) {
+	case pck_clock_source_main_clock:
+		return Pmc_PckSrc_Mainck;
+	case pck_clock_source_plla_clock:
+		return Pmc_PckSrc_Pllack;
+	default:
+		assert(0 &&
+		       "Cannot set PCK source, unknown configuration value");
+	}
+}
+
+static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
+{
+	if (isMcanPckConfigured) {
+		assert(firstConfig != NULL);
+		assert((firstConfig->pck_source == config->pck_source) && "");
+		assert((firstConfig->pck_prescaler == config->pck_prescaler) &&
+		       "");
+	} else {
+		firstConfig = config;
+	}
+
 	const Pmc_PckConfig pckConfig = {
 		.isEnabled = true,
-		.src = Pmc_PckSrc_Pllack,
-		.presc = 14,
+		.src = getPckSource(config),
+		.presc = config->pck_prescaler,
 	};
 
 	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
 						    PMC_DEFAULT_TIMEOUT, NULL);
 	assert(setCfgResult);
+}
+
+static void configureMcan0(samv71_can_generic_private_data *self)
+{
+	configurePioCan0(&self->pioCanTx);
+	configureMcanPck(self->m_config);
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
-				      MCAN0_INT0_Handler, self);
+				      mcan_int0_Handler, self);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
 }
 
-static void configureMcan1(samv71_can_generic_private_data *self,
-			   const CAN_Samv71_Rtems_Conf_T *const config)
+static void configureMcan1(samv71_can_generic_private_data *self)
 {
 	configurePioCan1(&self->pioCanTx);
-	const Pmc_PckConfig pckConfig = {
-		.isEnabled = true,
-		.src = Pmc_PckSrc_Pllack,
-		.presc = 14,
-	};
-
-	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
-						    PMC_DEFAULT_TIMEOUT, NULL);
-	assert(setCfgResult);
+	configureMcanPck(self->m_config);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
-				      MCAN1_INT0_Handler, self);
+				      mcan_int0_Handler, self);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 }
 
-void SamV71RtemsCanInit(
-	void *private_data, const enum SystemBus bus_id,
-	const enum SystemDevice device_id,
-	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
-	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
+static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 {
-	samv71_can_generic_private_data *self =
-		(samv71_can_generic_private_data *)private_data;
-
-	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
-	self->m_bus_id = bus_id;
-	self->m_config = device_configuration;
-
-	if (self->m_config->can_interface == mcan_interface_mcan0) {
-		configureMcan0(self, self->m_config);
-	} else if (device_configuration->can_interface == mcan_interface_mcan1) {
-		configureMcan1(self, self->m_config);
-	} else {
-		assert(0);
-	}
-
-	rtems_cache_disable_data();
-
 	Mcan_Config conf = defaultConfig;
 	conf.msgRamBaseAddress = self->msgRam;
 	conf.standardIdFilter.filterListAddress =
@@ -313,17 +274,59 @@ void SamV71RtemsCanInit(
 	conf.txBuffer.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 	conf.txEventFifo.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 
+	conf.nominalBitTiming.bitRatePrescaler =
+		self->m_config->bit_rate_prescaller;
+	conf.nominalBitTiming.synchronizationJump =
+		self->m_config->synchronization_jump;
+	conf.nominalBitTiming.timeSegmentAfterSamplePoint =
+		self->m_config->time_segments_after_sample_point;
+	conf.nominalBitTiming.timeSegmentBeforeSamplePoint =
+		self->m_config->time_segments_before_sample_point;
+	conf.dataBitTiming.bitRatePrescaler =
+		self->m_config->bit_rate_prescaller;
+	conf.dataBitTiming.synchronizationJump =
+		self->m_config->synchronization_jump;
+	conf.dataBitTiming.timeSegmentAfterSamplePoint =
+		self->m_config->time_segments_after_sample_point;
+	conf.dataBitTiming.timeSegmentBeforeSamplePoint =
+		self->m_config->time_segments_before_sample_point;
+
+	return conf;
+}
+
+void SamV71RtemsCanInit(
+	void *private_data, const enum SystemBus bus_id,
+	const enum SystemDevice device_id,
+	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
+	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
+{
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+
+	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
+	SamV71Core_DisableDataCacheInRegion(self->msgRam, 8);
+	self->m_bus_id = bus_id;
+	self->m_config = device_configuration;
+
+	if (self->m_config->can_interface == mcan_interface_mcan0) {
+		configureMcan0(self);
+	} else if (device_configuration->can_interface ==
+		   mcan_interface_mcan1) {
+		configureMcan1(self);
+	} else {
+		assert(0 &&
+		       "unknown mcan value of can-interface in configuration");
+	}
+
+	/* rtems_cache_disable_data(); */
+
+	Mcan_Config conf = prepareMcanConfig(self);
+
 	ErrorCode errCode = ErrorCode_NoError;
 	bool setConfResult =
 		Mcan_setConfig(&self->mcan, &conf, CONFIG_TIMEOUT, &errCode);
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
-
-	/* this is for comparision */
-	/* Mcan_Config readConfig; */
-	/* Mcan_getConfig(&mcan, &readConfig); */
-	/* int cmpResult = memcmp(&conf, &readConfig, sizeof(Mcan_Config)); */
-	/* assert(cmpResult == 0); */
 
 	const rtems_status_code status_code =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
@@ -335,7 +338,7 @@ void SamV71RtemsCanInit(
 	assert(status_code == RTEMS_SUCCESSFUL);
 
 	rtems_task_config taskConfig = {
-		.name = rtems_build_name('p', 'o', 'l', 'l'),
+		.name = SamV71Core_GenerateNewTaskName(),
 		.initial_priority = 1,
 		.storage_area = self->m_task_buffer,
 		.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE,
@@ -431,7 +434,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 		assert(0);
 	}
 
-	uint8_t pushIndex;
+	uint8_t pushIndex = 0;
 	bool pushResult =
 		Mcan_txQueuePush(&self->mcan, txElement, &pushIndex, &errCode);
 	assert(pushResult);
@@ -441,7 +444,3 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 						  MCAN_WAIT_TIMEOUT, pushIndex);
 	assert(result);
 }
-
-// config shall be here
-// so, the europrund
-// escaper
