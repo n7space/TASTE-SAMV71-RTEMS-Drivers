@@ -304,7 +304,7 @@ void SamV71RtemsCanInit(
 		(samv71_can_generic_private_data *)private_data;
 
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
-	SamV71Core_DisableDataCacheInRegion(self->msgRam, 8);
+	SamV71Core_DisableDataCacheInRegion(self->msgRam, 10);
 	self->m_bus_id = bus_id;
 	self->m_config = device_configuration;
 
@@ -318,7 +318,7 @@ void SamV71RtemsCanInit(
 		       "unknown mcan value of can-interface in configuration");
 	}
 
-	/* rtems_cache_disable_data(); */
+	rtems_cache_disable_data();
 
 	Mcan_Config conf = prepareMcanConfig(self);
 
@@ -403,11 +403,25 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 	Mcan_TxElement txElement;
 
-	if (true) { // TODO change
+	if (self->m_config->address.kind == static_can_id_PRESENT) {
 		txElement.esiFlag = Mcan_ElementEsi_Dominant;
-		txElement.idType = Mcan_IdType_Standard;
+
+		if (self->m_config->address.u.static_can_id.kind ==
+		    can_id_standard_PRESENT) {
+			txElement.idType = Mcan_IdType_Standard;
+			txElement.id = self->m_config->address.u.static_can_id.u
+					       .can_id_standard;
+		} else if (self->m_config->address.u.static_can_id.kind ==
+			   can_id_extended_PRESENT) {
+			txElement.idType = Mcan_IdType_Extended;
+			txElement.id = self->m_config->address.u.static_can_id.u
+					       .can_id_extended;
+		} else {
+			assert(0 &&
+			       "Unknown static can address value in configuration");
+		}
+
 		txElement.frameType = Mcan_FrameType_Data;
-		txElement.id = 0x7ff;
 		txElement.marker = 0;
 		txElement.isTxEventStored = FALSE;
 		txElement.isCanFdFormatEnabled = FALSE;
@@ -415,14 +429,17 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 		txElement.dataSize = length;
 		txElement.data = data;
 		txElement.isInterruptEnabled = FALSE;
-	} else if (true) { // TODO change
-		const uint32_t id = *(uint32_t *)(data);
+	} else if (self->m_config->address.kind ==
+		   application_control_can_id_PRESENT) {
+		uint32_t address = 0;
+		memcpy(&address, data, sizeof(uint32_t));
 
 		txElement.esiFlag = Mcan_ElementEsi_Dominant;
-		txElement.idType = id & 0xe0000000 ? Mcan_IdType_Extended :
-						     Mcan_IdType_Standard;
+		txElement.idType = address & 0x20000000 ? Mcan_IdType_Extended :
+							  Mcan_IdType_Standard;
 		txElement.frameType = Mcan_FrameType_Data;
-		txElement.id = id & 0x1fffffff >> 29;
+		txElement.id = address & 0x20000000 ? address & 0x1fffffff :
+						      address & 0x000007ff;
 		txElement.marker = 0;
 		txElement.isTxEventStored = FALSE;
 		txElement.isCanFdFormatEnabled = FALSE;
@@ -431,7 +448,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 		txElement.data = data + sizeof(uint32_t);
 		txElement.isInterruptEnabled = FALSE;
 	} else {
-		assert(0);
+		assert(0 && "Unknown address kind in configuration");
 	}
 
 	uint8_t pushIndex = 0;
