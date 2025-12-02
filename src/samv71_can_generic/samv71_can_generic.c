@@ -109,30 +109,6 @@ static const Mcan_Config defaultConfig = {
     .wdtCounter = 0u,
   };
 
-static uint8_t getElementBytesCount(const Mcan_ElementSize elementSize)
-{
-	switch (elementSize) {
-	case Mcan_ElementSize_8:
-		return 8;
-	case Mcan_ElementSize_12:
-		return 12;
-	case Mcan_ElementSize_16:
-		return 16;
-	case Mcan_ElementSize_20:
-		return 20;
-	case Mcan_ElementSize_24:
-		return 24;
-	case Mcan_ElementSize_32:
-		return 32;
-	case Mcan_ElementSize_48:
-		return 48;
-	case Mcan_ElementSize_64:
-		return 64;
-	default:
-		return 0;
-	}
-}
-
 static void mcan_int0_Handler(void *private_data)
 {
 	samv71_can_generic_private_data *self =
@@ -318,8 +294,6 @@ void SamV71RtemsCanInit(
 		       "unknown mcan value of can-interface in configuration");
 	}
 
-	rtems_cache_disable_data();
-
 	Mcan_Config conf = prepareMcanConfig(self);
 
 	ErrorCode errCode = ErrorCode_NoError;
@@ -327,6 +301,11 @@ void SamV71RtemsCanInit(
 		Mcan_setConfig(&self->mcan, &conf, CONFIG_TIMEOUT, &errCode);
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
+
+	if (BROKER_BUFFER_SIZE > 8) {
+		Escaper_init(&self->m_escaper, self->m_tx_buffer, 8,
+			     self->m_value_buffer, BROKER_BUFFER_SIZE);
+	}
 
 	const rtems_status_code status_code =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
@@ -365,6 +344,10 @@ void SamV71RtemsCanPoll(void *private_data)
 		(samv71_can_generic_private_data *)private_data;
 	ErrorCode errCode = ErrorCode_NoError;
 
+	if (BROKER_BUFFER_SIZE > 8) {
+		Escaper_start_decoder(&self->m_escaper);
+	}
+
 	while (true) {
 		/// Wait for data to arrive. Semaphore will be given
 		rtems_status_code obtainResult = obtainResult =
@@ -377,9 +360,8 @@ void SamV71RtemsCanPoll(void *private_data)
 			&self->mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);
 		assert(fifoStatusResult);
 		if (fifoStatus.count > 0) {
-			uint8_t rxData[64];
 			Mcan_RxElement rxElement;
-			rxElement.data = rxData;
+			rxElement.data = self->m_rx_buffer;
 			bool fifoPullResult =
 				Mcan_rxFifoPull(&self->mcan, Mcan_RxFifoId_0,
 						&rxElement, &errCode);
@@ -387,71 +369,39 @@ void SamV71RtemsCanPoll(void *private_data)
 			assert(fifoPullResult);
 			assert(errCode == ErrorCode_NoError);
 
-			Broker_receive_packet(self->m_bus_id, rxData,
-					      rxElement.dataSize);
+			if (BROKER_BUFFER_SIZE > 8) {
+				Escaper_decode_packet(&self->m_escaper,
+						      self->m_bus_id,
+						      self->m_rx_buffer,
+						      rxElement.dataSize,
+						      &Broker_receive_packet);
+			} else {
+				Broker_receive_packet(self->m_bus_id,
+						      self->m_rx_buffer,
+						      rxElement.dataSize);
+			}
 		}
 	}
 }
 
-void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
-			const size_t length)
+static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
+				    const Mcan_IdType idType, const uint32_t id,
+				    const uint8_t *data, const uint8_t length)
 {
-	samv71_can_generic_private_data *self =
-		(samv71_can_generic_private_data *)private_data;
-
-	ErrorCode errCode = ErrorCode_NoError;
-
 	Mcan_TxElement txElement;
-
-	if (self->m_config->address.kind == static_can_id_PRESENT) {
-		txElement.esiFlag = Mcan_ElementEsi_Dominant;
-
-		if (self->m_config->address.u.static_can_id.kind ==
-		    can_id_standard_PRESENT) {
-			txElement.idType = Mcan_IdType_Standard;
-			txElement.id = self->m_config->address.u.static_can_id.u
-					       .can_id_standard;
-		} else if (self->m_config->address.u.static_can_id.kind ==
-			   can_id_extended_PRESENT) {
-			txElement.idType = Mcan_IdType_Extended;
-			txElement.id = self->m_config->address.u.static_can_id.u
-					       .can_id_extended;
-		} else {
-			assert(0 &&
-			       "Unknown static can address value in configuration");
-		}
-
-		txElement.frameType = Mcan_FrameType_Data;
-		txElement.marker = 0;
-		txElement.isTxEventStored = FALSE;
-		txElement.isCanFdFormatEnabled = FALSE;
-		txElement.isBitRateSwitchingEnabled = FALSE;
-		txElement.dataSize = length;
-		txElement.data = data;
-		txElement.isInterruptEnabled = FALSE;
-	} else if (self->m_config->address.kind ==
-		   application_control_can_id_PRESENT) {
-		uint32_t address = 0;
-		memcpy(&address, data, sizeof(uint32_t));
-
-		txElement.esiFlag = Mcan_ElementEsi_Dominant;
-		txElement.idType = address & 0x20000000 ? Mcan_IdType_Extended :
-							  Mcan_IdType_Standard;
-		txElement.frameType = Mcan_FrameType_Data;
-		txElement.id = address & 0x20000000 ? address & 0x1fffffff :
-						      address & 0x000007ff;
-		txElement.marker = 0;
-		txElement.isTxEventStored = FALSE;
-		txElement.isCanFdFormatEnabled = FALSE;
-		txElement.isBitRateSwitchingEnabled = FALSE;
-		txElement.dataSize = length - sizeof(uint32_t);
-		txElement.data = data + sizeof(uint32_t);
-		txElement.isInterruptEnabled = FALSE;
-	} else {
-		assert(0 && "Unknown address kind in configuration");
-	}
-
+	txElement.esiFlag = Mcan_ElementEsi_Dominant;
+	txElement.idType = idType;
+	txElement.id = id;
+	txElement.frameType = Mcan_FrameType_Data;
+	txElement.marker = 0;
+	txElement.isTxEventStored = FALSE;
+	txElement.isCanFdFormatEnabled = FALSE;
+	txElement.isBitRateSwitchingEnabled = FALSE;
+	txElement.dataSize = length;
+	txElement.data = data;
+	txElement.isInterruptEnabled = FALSE;
 	uint8_t pushIndex = 0;
+	ErrorCode errCode = ErrorCode_NoError;
 	bool pushResult =
 		Mcan_txQueuePush(&self->mcan, txElement, &pushIndex, &errCode);
 	assert(pushResult);
@@ -460,4 +410,61 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 	bool result = waitForTransmissionFinished(&self->mcan,
 						  MCAN_WAIT_TIMEOUT, pushIndex);
 	assert(result);
+}
+
+void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
+			const size_t length)
+{
+	samv71_can_generic_private_data *self =
+		(samv71_can_generic_private_data *)private_data;
+
+	if (self->m_config->address.kind == static_can_id_PRESENT) {
+		Mcan_IdType idType = Mcan_IdType_Standard;
+		uint32_t id = 0;
+		if (self->m_config->address.u.static_can_id.kind ==
+		    can_id_standard_PRESENT) {
+			idType = Mcan_IdType_Standard;
+			id = self->m_config->address.u.static_can_id.u
+				     .can_id_standard;
+		} else if (self->m_config->address.u.static_can_id.kind ==
+			   can_id_extended_PRESENT) {
+			idType = Mcan_IdType_Extended;
+			id = self->m_config->address.u.static_can_id.u
+				     .can_id_extended;
+		} else {
+			assert(0 &&
+			       "Unknown static can address value in configuration");
+		}
+
+		if (BROKER_BUFFER_SIZE > 8) {
+			size_t index = 0;
+			size_t packet_length = 0;
+			Escaper_start_encoder(&self->m_escaper);
+			while (index < length) {
+				packet_length = Escaper_encode_packet(
+					&self->m_escaper, data, length, &index);
+				SamV71RtemsCanSendFrame(self, idType, id,
+							self->m_tx_buffer,
+							packet_length);
+			}
+		} else {
+			SamV71RtemsCanSendFrame(self, idType, id, data, length);
+		}
+
+	} else if (self->m_config->address.kind ==
+		   application_control_can_id_PRESENT) {
+		uint32_t address = 0;
+		memcpy(&address, data, sizeof(uint32_t));
+		Mcan_IdType idType = address & 0x20000000 ?
+					     Mcan_IdType_Extended :
+					     Mcan_IdType_Standard;
+		uint32_t id = address & 0x20000000 ? address & 0x1fffffff :
+						     address & 0x000007ff;
+
+		SamV71RtemsCanSendFrame(self, idType, id,
+					data + sizeof(uint32_t),
+					length - sizeof(uint32_t));
+	} else {
+		assert(0 && "Unknown address kind in configuration");
+	}
 }
