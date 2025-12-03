@@ -47,7 +47,7 @@ SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
     CAN-Samv71-Rtems-Conf-T ::= SEQUENCE {
         can-interface CAN-Samv71-Rtems-Interface-T,
-        bit-rate-prescaller CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler DEFAULT 0,
+        bit-rate-prescaler CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler DEFAULT 0,
         synchronization-jump CAN-Samv71-Rtems-Data-Synchronization-Jump-Width DEFAULT 2,
         time-segments-after-sample-point CAN-Samv71-Rtems-Data-Time-Segment-After-Sample-Point DEFAULT 2,
         time-segments-before-sample-point CAN-Samv71-Rtems-Data-Time-Segment-Before-Sample-Point DEFAULT 15,

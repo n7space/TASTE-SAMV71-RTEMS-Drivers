@@ -157,7 +157,7 @@ flag CAN_Samv71_Rtems_Address_IsConstraintValid(const CAN_Samv71_Rtems_Address* 
 void CAN_Samv71_Rtems_Address_Initialize(CAN_Samv71_Rtems_Address* pVal);
 /*-- CAN_Samv71_Rtems_Conf_T --------------------------------------------*/
 typedef struct {
-    unsigned long bit_rate_prescaller:1;
+    unsigned long bit_rate_prescaler:1;
     unsigned long synchronization_jump:1;
     unsigned long time_segments_after_sample_point:1;
     unsigned long time_segments_before_sample_point:1;
@@ -166,7 +166,7 @@ typedef struct {
 } CAN_Samv71_Rtems_Conf_T_exist;
 typedef struct {
     CAN_Samv71_Rtems_Interface_T can_interface;
-    CAN_Samv71_Rtems_Data_Bit_Rate_Prescaler bit_rate_prescaller;
+    CAN_Samv71_Rtems_Data_Bit_Rate_Prescaler bit_rate_prescaler;
     CAN_Samv71_Rtems_Data_Synchronization_Jump_Width synchronization_jump;
     CAN_Samv71_Rtems_Data_Time_Segment_After_Sample_Point time_segments_after_sample_point;
     CAN_Samv71_Rtems_Data_Time_Segment_Before_Sample_Point time_segments_before_sample_point;
@@ -180,7 +180,7 @@ typedef struct {
 
 #define ERR_CAN_SAMV71_RTEMS_CONF_T		176  /**/
 #define ERR_CAN_SAMV71_RTEMS_CONF_T_CAN_INTERFACE_2		106  /**/
-#define ERR_CAN_SAMV71_RTEMS_CONF_T_BIT_RATE_PRESCALLER_2		116  /**/
+#define ERR_CAN_SAMV71_RTEMS_CONF_T_BIT_RATE_PRESCALER_2		116  /**/
 #define ERR_CAN_SAMV71_RTEMS_CONF_T_SYNCHRONIZATION_JUMP_2		126  /**/
 #define ERR_CAN_SAMV71_RTEMS_CONF_T_TIME_SEGMENTS_AFTER_SAMPLE_POINT_2		136  /**/
 #define ERR_CAN_SAMV71_RTEMS_CONF_T_TIME_SEGMENTS_BEFORE_SAMPLE_POINT_2		146  /**/

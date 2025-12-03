@@ -270,8 +270,8 @@ flag CAN_Samv71_Rtems_Conf_T_IsConstraintValid(const CAN_Samv71_Rtems_Conf_T* pV
     flag ret = TRUE;
     ret = CAN_Samv71_Rtems_Interface_T_IsConstraintValid((&(pVal->can_interface)), pErrCode);
     if (ret) {
-        if (pVal->exist.bit_rate_prescaller) {
-        	ret = CAN_Samv71_Rtems_Data_Bit_Rate_Prescaler_IsConstraintValid((&(pVal->bit_rate_prescaller)), pErrCode);
+        if (pVal->exist.bit_rate_prescaler) {
+        	ret = CAN_Samv71_Rtems_Data_Bit_Rate_Prescaler_IsConstraintValid((&(pVal->bit_rate_prescaler)), pErrCode);
         }
         if (ret) {
             if (pVal->exist.synchronization_jump) {
@@ -313,9 +313,9 @@ void CAN_Samv71_Rtems_Conf_T_Initialize(CAN_Samv71_Rtems_Conf_T* pVal)
 
 	/*set can_interface */
 	CAN_Samv71_Rtems_Interface_T_Initialize((&(pVal->can_interface)));
-	/*set bit_rate_prescaller */
-	pVal->exist.bit_rate_prescaller = 1;
-	pVal->bit_rate_prescaller = 0UL;
+	/*set bit_rate_prescaler */
+	pVal->exist.bit_rate_prescaler = 1;
+	pVal->bit_rate_prescaler = 0UL;
 	/*set synchronization_jump */
 	pVal->exist.synchronization_jump = 1;
 	pVal->synchronization_jump = 2UL;

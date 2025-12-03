@@ -275,7 +275,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.txEventFifo.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
 
 	conf.nominalBitTiming.bitRatePrescaler =
-		self->m_config->bit_rate_prescaller;
+		self->m_config->bit_rate_prescaler;
 	conf.nominalBitTiming.synchronizationJump =
 		self->m_config->synchronization_jump;
 	conf.nominalBitTiming.timeSegmentAfterSamplePoint =
@@ -283,7 +283,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.nominalBitTiming.timeSegmentBeforeSamplePoint =
 		self->m_config->time_segments_before_sample_point;
 	conf.dataBitTiming.bitRatePrescaler =
-		self->m_config->bit_rate_prescaller;
+		self->m_config->bit_rate_prescaler;
 	conf.dataBitTiming.synchronizationJump =
 		self->m_config->synchronization_jump;
 	conf.dataBitTiming.timeSegmentAfterSamplePoint =
@@ -304,7 +304,8 @@ void SamV71RtemsCanInit(
 		(samv71_can_generic_private_data *)private_data;
 
 	memset(self->msgRam, 0, MSGRAM_SIZE * sizeof(uint32_t));
-	SamV71Core_DisableDataCacheInRegion(self->msgRam, 10);
+	SamV71Core_DisableDataCacheInRegion(self->msgRam,
+					    MSGRAM_BYTE_SIZE_EXPONENT - 1);
 	self->m_bus_id = bus_id;
 	self->m_config = device_configuration;
 
@@ -345,8 +346,7 @@ void SamV71RtemsCanInit(
 		.initial_priority = 1,
 		.storage_area = self->m_task_buffer,
 		.storage_size = Can_SAMV71_RTEMS_TASK_BUFFER_SIZE,
-		.maximum_thread_local_storage_size =
-			Can_SAMV71_RTEMS_UART_TLS_SIZE,
+		.maximum_thread_local_storage_size = Can_SAMV71_RTEMS_TLS_SIZE,
 		.storage_free = NULL,
 		.initial_modes = RTEMS_PREEMPT,
 		.attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
@@ -374,9 +374,8 @@ void SamV71RtemsCanPoll(void *private_data)
 
 	while (true) {
 		/// Wait for data to arrive. Semaphore will be given
-		rtems_status_code obtainResult = obtainResult =
-			rtems_semaphore_obtain(self->m_rx_semaphore, RTEMS_WAIT,
-					       RTEMS_NO_TIMEOUT);
+		rtems_status_code obtainResult = rtems_semaphore_obtain(
+			self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 		assert(obtainResult == RTEMS_SUCCESSFUL);
 
 		Mcan_RxFifoStatus fifoStatus;
