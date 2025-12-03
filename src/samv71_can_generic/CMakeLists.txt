@@ -1,7 +1,7 @@
 add_library(SamV71RtemsCan STATIC)
 target_sources(SamV71RtemsCan
   PRIVATE   samv71_can_generic.c
-  PUBLIC    samv71_can_generic.c)
+  PUBLIC    samv71_can_generic.h)
 
  target_include_directories(SamV71RtemsCan
   PUBLIC    ${CMAKE_SOURCE_DIR}/src/RuntimeMocks

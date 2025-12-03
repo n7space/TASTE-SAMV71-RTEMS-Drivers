@@ -31,8 +31,8 @@
 #include <Pmc/PmcPeripheralId.h>
 #include <Utils/ErrorCode.h>
 
-#include <Broker/Broker.h>
-#include <SamV71Core/SamV71Core.h>
+#include <Broker.h>
+#include <SamV71Core.h>
 
 #define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
@@ -109,20 +109,20 @@ static const Mcan_Config defaultConfig = {
       .elementSize = Mcan_ElementSize_8,
     },
     .txEventFifo = {.isEnabled = FALSE,
-					.startAddress = NULL,
-					.size = 0,
-					.watermark = 0,
-	},
+                    .startAddress = NULL,
+                    .size = 0,
+                    .watermark = 0,
+    },
     .interrupts = {
-	  {
-		.isEnabled = TRUE,
-		.line = Mcan_InterruptLine_0,
-	  },
-	  {
-		.isEnabled = FALSE,
-		.line = Mcan_InterruptLine_1,
-	  }
-	},
+      {
+        .isEnabled = TRUE,
+        .line = Mcan_InterruptLine_0,
+      },
+      {
+        .isEnabled = FALSE,
+        .line = Mcan_InterruptLine_1,
+      }
+    },
     .isLine0InterruptEnabled = TRUE,
     .isLine1InterruptEnabled = FALSE,
     .wdtCounter = 0u,
@@ -225,6 +225,7 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 		       "Cannot configure PCK5, the driver has different configuration than other.");
 	} else {
 		firstConfig = config;
+		isMcanPckConfigured = TRUE;
 	}
 
 	const Pmc_PckConfig pckConfig = {
@@ -236,7 +237,6 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
 						    PMC_DEFAULT_TIMEOUT, NULL);
 	assert(setCfgResult);
-	isMcanPckConfigured = TRUE;
 }
 
 static void configureMcan0(samv71_can_generic_private_data *self)
@@ -292,6 +292,25 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 		self->m_config->time_segments_before_sample_point;
 
 	return conf;
+}
+
+static void getCanIdAndTypeFromMessageData(const uint8_t *const data,
+					   const size_t length,
+					   Mcan_IdType *idType, uint32_t *id)
+{
+	// first 29 bits are CAN-ID
+	// the bit 30 determines if CAN-ID is 11-bit (standard) or 29-bit (extended)
+	assert(length >= 4);
+	uint32_t address = 0;
+	memcpy(&address, data, sizeof(uint32_t));
+	if (idType != NULL) {
+		*idType = (address & 0x20000000) ? Mcan_IdType_Extended :
+						   Mcan_IdType_Standard;
+	}
+	if (id != NULL) {
+		*id = address & 0x20000000 ? address & 0x1fffffff :
+					     address & 0x000007ff;
+	}
 }
 
 void SamV71RtemsCanInit(
@@ -476,13 +495,9 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 	} else if (self->m_config->address.kind ==
 		   application_control_can_id_PRESENT) {
-		uint32_t address = 0;
-		memcpy(&address, data, sizeof(uint32_t));
-		Mcan_IdType idType = address & 0x20000000 ?
-					     Mcan_IdType_Extended :
-					     Mcan_IdType_Standard;
-		uint32_t id = address & 0x20000000 ? address & 0x1fffffff :
-						     address & 0x000007ff;
+		Mcan_IdType idType = 0;
+		uint32_t id = 0;
+		getCanIdAndTypeFromMessageData(data, length, &idType, &id);
 
 		SamV71RtemsCanSendFrame(self, idType, id,
 					data + sizeof(uint32_t),
