@@ -31,10 +31,17 @@ SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
         can-id-extended CAN-Samv71-Rtems-Extended-Can-Id
     }
 
-	CAN-Samv71-Rtems-Dummy ::= BOOLEAN
+    -- The choice option cannot be NULL or empty SEQUENCE to work with space creator.
+    CAN-Samv71-Rtems-Dummy ::= BOOLEAN
 
+    -- This determines what value shall be used for CAN-ID for output frames.
     CAN-Samv71-Rtems-Address ::= CHOICE {
+        -- The first option sets one constant CAN-ID for all output frames.
         static-can-id CAN-Samv71-Rtems-Can-Id,
+        -- The second option allows the application to specify exact value of CAN-ID.  Driver uses first four
+        -- bytes of every message interpreted as uint32_t to determine CAN-ID. The lowest 11 or 29 bits are a
+        -- value of CAN-ID, where bit 30 determines if CAN-ID is standard (11 bit) or extended (29 bit).  The
+        -- actual data to send in a frame begins from byte 5 of message.
         application-control-can-id CAN-Samv71-Rtems-Dummy
     }
 

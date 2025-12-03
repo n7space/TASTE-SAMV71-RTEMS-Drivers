@@ -145,6 +145,9 @@ static void mcan_int0_Handler(void *private_data)
 static bool waitForTransmissionFinished(Mcan *mcan, uint32_t timeout,
 					const uint8_t index)
 {
+	// Use busy loop to wait for a given bit in MCAN_TXBTO, what indicates that
+	// transmission is finished. Another implementation to consided is to use a
+	// semaphore and interrupt.
 	for (uint32_t counter = 0; counter < timeout; ++counter) {
 		if (Mcan_txBufferIsTransmissionFinished(mcan, index)) {
 			return true;
@@ -170,7 +173,7 @@ static void configurePioCan0(Pio *pio)
 	bool pioStatus = Pio_init(Pio_Port_B, pio, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
-	pioStatus = Pio_setPinsConfig(pio, PIO_PIN_2 | PIO_PIN_2,
+	pioStatus = Pio_setPinsConfig(pio, PIO_PIN_2 | PIO_PIN_3,
 				      &pioCanTxConfig, &errorCode);
 	assert(pioStatus);
 	assert(errorCode == ErrorCode_NoError);
@@ -208,7 +211,7 @@ static Pmc_PckSrc getPckSource(const CAN_Samv71_Rtems_Conf_T *const config)
 		return Pmc_PckSrc_Pllack;
 	default:
 		assert(0 &&
-		       "Cannot set PCK source, unknown configuration value");
+		       "Cannot determine PCK source, unknown configuration value");
 	}
 }
 
@@ -216,9 +219,10 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 {
 	if (isMcanPckConfigured) {
 		assert(firstConfig != NULL);
-		assert((firstConfig->pck_source == config->pck_source) && "");
+		assert((firstConfig->pck_source == config->pck_source) &&
+		       "Cannot configure PCK5, the driver has different configuration than other.");
 		assert((firstConfig->pck_prescaler == config->pck_prescaler) &&
-		       "");
+		       "Cannot configure PCK5, the driver has different configuration than other.");
 	} else {
 		firstConfig = config;
 	}
@@ -232,6 +236,7 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 	bool setCfgResult = SamV71Core_SetPckConfig(Pmc_PckId_5, &pckConfig,
 						    PMC_DEFAULT_TIMEOUT, NULL);
 	assert(setCfgResult);
+	isMcanPckConfigured = TRUE;
 }
 
 static void configureMcan0(samv71_can_generic_private_data *self)
