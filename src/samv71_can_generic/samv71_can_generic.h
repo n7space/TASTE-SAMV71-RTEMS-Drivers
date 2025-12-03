@@ -20,6 +20,11 @@
 #ifndef SAMV71_RTEMS_CAN_H
 #define SAMV71_RTEMS_CAN_H
 
+/**
+ * @file     samv71_can_generic.h
+ * @brief    Driver for TASTE for SAMV71 CAN
+ */
+
 #include <rtems.h>
 
 #include <drivers_config.h>
@@ -54,6 +59,13 @@
 					 Can_SAMV71_RTEMS_UART_TLS_SIZE, \
 				 RTEMS_FLOATING_POINT))
 
+/**
+ * @brief Structure for samv71_can_generic driver internal data
+ *
+ * This structure is allocated by runtime and the pointer is passed to all
+ * driver functions. The name of this structure shall match driver definition
+ * from ocarina_components.aadl and has suffix '_private_data'.
+ */
 typedef struct __attribute__((aligned(4096))) {
 	uint32_t msgRam[MSGRAM_SIZE];
 	enum SystemBus m_bus_id;
@@ -70,12 +82,43 @@ typedef struct __attribute__((aligned(4096))) {
 	uint8_t m_value_buffer[BROKER_BUFFER_SIZE];
 } samv71_can_generic_private_data;
 
+/**
+ * @brief Initialize samv71_can_generic driver.
+ *
+ * Function is used by runtime to initialize the driver.
+ *
+ * @param private_data                  Driver private data, allocated by
+ * runtime
+ * @param bus_id                        Identifier of the bus, which is driver
+ * @param device_id                     Identifier of the device
+ * @param device_configuration          Configuration of device
+ * @param remote_device_configuration   Configuration of remote device
+ */
 void SamV71RtemsCanInit(
 	void *private_data, const enum SystemBus bus_id,
 	const enum SystemDevice device_id,
 	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
 	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration);
+
+/**
+ * @brief Function which implements receiving data from remote partition.
+ *
+ * Functions works in separate thread, which is initialized by SamV71RtemsCanInit
+ *
+ * @param private_data   Driver private data, allocated by runtime
+ */
 void SamV71RtemsCanPoll(void *private_data);
+
+/**
+ * @brief Send data to remote partition.
+ *
+ * Function is used by runtime.
+ *
+ * @param private_data   Driver private data, allocated by runtime
+ * @param data           The Buffer which data to send to connected remote
+ * partition
+ * @param length         The size of the buffer
+ */
 void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			const size_t length);
 
