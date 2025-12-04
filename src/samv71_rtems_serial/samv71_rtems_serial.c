@@ -675,7 +675,7 @@ void Samv71RtemsSerialInit(
 		     Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE);
 
 	rtems_task_config taskConfig = {
-		.name = rtems_build_name('p', 'o', 'l', 'l'),
+		.name = SamV71Core_GenerateNewTaskName(),
 		.initial_priority = 1,
 		.storage_area = self->m_task_buffer,
 		.storage_size = Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE,
