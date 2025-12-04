@@ -300,16 +300,20 @@ static void getCanIdAndTypeFromMessageData(const uint8_t *const data,
 {
 	// first 29 bits are CAN-ID
 	// the bit 30 determines if CAN-ID is 11-bit (standard) or 29-bit (extended)
-	assert(length >= 4);
+	const uint32_t canIdTypeMask = 0x20000000u;
+	const uint32_t canExtendedIdMask = 0x1fffffffu;
+	const uint32_t canStandardIdMask = 0x000007ffu;
+
+	assert(length >= sizeof(uint32_t));
 	uint32_t address = 0;
 	memcpy(&address, data, sizeof(uint32_t));
 	if (idType != NULL) {
-		*idType = (address & 0x20000000) ? Mcan_IdType_Extended :
-						   Mcan_IdType_Standard;
+		*idType = (address & canIdTypeMask) ? Mcan_IdType_Extended :
+						      Mcan_IdType_Standard;
 	}
 	if (id != NULL) {
-		*id = address & 0x20000000 ? address & 0x1fffffff :
-					     address & 0x000007ff;
+		*id = address & canIdTypeMask ? address & canExtendedIdMask :
+						address & canStandardIdMask;
 	}
 }
 
