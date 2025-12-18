@@ -36,6 +36,7 @@
 
 #define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
+#define MCAN_MAX_DATA_SIZE 8u
 
 static bool isMcanPckConfigured = FALSE;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
@@ -350,7 +351,8 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
-	if (BROKER_BUFFER_SIZE > 8) {
+	if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE &&
+	    self->m_config->address.kind == static_can_id_PRESENT) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer, 8,
 			     self->m_value_buffer, BROKER_BUFFER_SIZE);
 	}
@@ -391,7 +393,8 @@ void SamV71RtemsCanPoll(void *private_data)
 		(samv71_can_generic_private_data *)private_data;
 	ErrorCode errCode = ErrorCode_NoError;
 
-	if (BROKER_BUFFER_SIZE > 8) {
+	if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE &&
+	    self->m_config->address.kind == static_can_id_PRESENT) {
 		Escaper_start_decoder(&self->m_escaper);
 	}
 
@@ -407,7 +410,20 @@ void SamV71RtemsCanPoll(void *private_data)
 		assert(fifoStatusResult);
 		if (fifoStatus.count > 0) {
 			Mcan_RxElement rxElement;
-			rxElement.data = self->m_rx_buffer;
+
+			if (self->m_config->address.kind ==
+			    static_can_id_PRESENT) {
+				rxElement.data = self->m_rx_buffer;
+			} else if (self->m_config->address.kind ==
+				   application_control_can_id_PRESENT) {
+				rxElement.data =
+					self->m_rx_buffer + sizeof(uint32_t);
+				assert(BROKER_BUFFER_SIZE > 8);
+			} else {
+				assert(0 &&
+				       "Unknown static can address value in configuration");
+			}
+
 			bool fifoPullResult =
 				Mcan_rxFifoPull(&self->mcan, Mcan_RxFifoId_0,
 						&rxElement, &errCode);
@@ -415,13 +431,26 @@ void SamV71RtemsCanPoll(void *private_data)
 			assert(fifoPullResult);
 			assert(errCode == ErrorCode_NoError);
 
-			if (BROKER_BUFFER_SIZE > 8) {
+			if (self->m_config->address.kind ==
+				    static_can_id_PRESENT &&
+			    (BROKER_BUFFER_SIZE <= MCAN_MAX_DATA_SIZE)) {
 				Escaper_decode_packet(&self->m_escaper,
 						      self->m_bus_id,
 						      self->m_rx_buffer,
 						      rxElement.dataSize,
 						      &Broker_receive_packet);
 			} else {
+				if (self->m_config->address.kind ==
+				    application_control_can_id_PRESENT) {
+					uint32_t *address_pointer =
+						(uint32_t *)self->m_rx_buffer;
+					*address_pointer = rxElement.id;
+					// id extended standard
+					if (rxElement.idType ==
+					    Mcan_IdType_Extended) {
+						*address_pointer |= 0x20000000u;
+					}
+				}
 				Broker_receive_packet(self->m_bus_id,
 						      self->m_rx_buffer,
 						      rxElement.dataSize);
@@ -482,7 +511,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			       "Unknown static can address value in configuration");
 		}
 
-		if (BROKER_BUFFER_SIZE > 8) {
+		if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE) {
 			size_t index = 0;
 			size_t packet_length = 0;
 			Escaper_start_encoder(&self->m_escaper);
