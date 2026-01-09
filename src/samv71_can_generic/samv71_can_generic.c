@@ -33,6 +33,7 @@
 #include <Utils/ErrorCode.h>
 
 #include <Broker.h>
+#include <system_spec.h>
 #include <SamV71Core.h>
 
 #define MCAN_WAIT_TIMEOUT 100000u
@@ -352,12 +353,12 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
-	if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE &&
-	    self->m_config->address.kind == static_can_id_PRESENT) {
+	if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
 		// escaper can be initialized only when max message size is greater than max CAN frame length
 		// and can-id has static configuration
-		Escaper_init(&self->m_escaper, self->m_tx_buffer, 8,
-			     self->m_value_buffer, BROKER_BUFFER_SIZE);
+		Escaper_init(&self->m_escaper, self->m_tx_buffer,
+			     MCAN_MAX_DATA_SIZE, self->m_value_buffer,
+			     bus_message_size[self->m_bus_id]);
 	}
 
 	if (self->m_config->address.kind ==
@@ -402,8 +403,7 @@ void SamV71RtemsCanPoll(void *private_data)
 		(samv71_can_generic_private_data *)private_data;
 	ErrorCode errCode = ErrorCode_NoError;
 
-	if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE &&
-	    self->m_config->address.kind == static_can_id_PRESENT) {
+	if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
 		Escaper_start_decoder(&self->m_escaper);
 	}
 
@@ -440,9 +440,8 @@ void SamV71RtemsCanPoll(void *private_data)
 			assert(fifoPullResult);
 			assert(errCode == ErrorCode_NoError);
 
-			if (self->m_config->address.kind ==
-				    static_can_id_PRESENT &&
-			    (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE)) {
+			if (bus_message_size[self->m_bus_id] >
+			    MCAN_MAX_DATA_SIZE) {
 				// if Escaper is enabled, then it will call Broker_receive_packet
 				Escaper_decode_packet(&self->m_escaper,
 						      self->m_bus_id,
@@ -523,7 +522,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			       "Unknown static can address value in configuration");
 		}
 
-		if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE) {
+		if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
 			size_t index = 0;
 			size_t packet_length = 0;
 			Escaper_start_encoder(&self->m_escaper);
