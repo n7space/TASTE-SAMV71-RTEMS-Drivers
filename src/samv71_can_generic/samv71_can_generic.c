@@ -353,7 +353,8 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
-	if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
+	if ((bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) &&
+	    (self->m_config->address.kind == static_can_id_PRESENT)) {
 		// escaper can be initialized only when max message size is greater than max CAN frame length
 		// and can-id has static configuration
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
