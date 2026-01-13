@@ -19,6 +19,7 @@
 
 #include "samv71_can_generic.h"
 
+#include "samv71-rtems-can-driver.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -353,8 +354,16 @@ void SamV71RtemsCanInit(
 
 	if (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE &&
 	    self->m_config->address.kind == static_can_id_PRESENT) {
+		// escaper can be initialized only when max message size is greater than max CAN frame length
+		// and can-id has static configuration
 		Escaper_init(&self->m_escaper, self->m_tx_buffer, 8,
 			     self->m_value_buffer, BROKER_BUFFER_SIZE);
+	}
+
+	if (self->m_config->address.kind ==
+	    application_control_can_id_PRESENT) {
+		assert((BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE) &&
+		       "incorrect configuration, application-control-can-id cannot be used when maximum data length is greater than 8");
 	}
 
 	const rtems_status_code status_code =
@@ -417,8 +426,8 @@ void SamV71RtemsCanPoll(void *private_data)
 			} else if (self->m_config->address.kind ==
 				   application_control_can_id_PRESENT) {
 				rxElement.data =
-					self->m_rx_buffer + sizeof(uint32_t);
-				assert(BROKER_BUFFER_SIZE > 8);
+					self->m_rx_buffer +
+					sizeof(uint32_t); // 4 bytes reserved for can-id
 			} else {
 				assert(0 &&
 				       "Unknown static can address value in configuration");
@@ -433,15 +442,18 @@ void SamV71RtemsCanPoll(void *private_data)
 
 			if (self->m_config->address.kind ==
 				    static_can_id_PRESENT &&
-			    (BROKER_BUFFER_SIZE <= MCAN_MAX_DATA_SIZE)) {
+			    (BROKER_BUFFER_SIZE > MCAN_MAX_DATA_SIZE)) {
+				// if Escaper is enabled, then it will call Broker_receive_packet
 				Escaper_decode_packet(&self->m_escaper,
 						      self->m_bus_id,
 						      self->m_rx_buffer,
 						      rxElement.dataSize,
 						      &Broker_receive_packet);
 			} else {
+				// without Escaper Broker_receive_packet needs to be called directly
 				if (self->m_config->address.kind ==
 				    application_control_can_id_PRESENT) {
+					// if application controls can-id, then write can-id into first 4 bytes od m_rx_buffer
 					uint32_t *address_pointer =
 						(uint32_t *)self->m_rx_buffer;
 					*address_pointer = rxElement.id;
