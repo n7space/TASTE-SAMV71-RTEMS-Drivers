@@ -20,6 +20,7 @@
 #include "samv71_can_generic.h"
 
 #include "samv71-rtems-can-driver.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -462,10 +463,17 @@ void SamV71RtemsCanPoll(void *private_data)
 					    Mcan_IdType_Extended) {
 						*address_pointer |= 0x20000000u;
 					}
+					Broker_receive_packet(
+						self->m_bus_id,
+						self->m_rx_buffer,
+						rxElement.dataSize +
+							sizeof(uint32_t));
+				} else {
+					Broker_receive_packet(
+						self->m_bus_id,
+						self->m_rx_buffer,
+						rxElement.dataSize);
 				}
-				Broker_receive_packet(self->m_bus_id,
-						      self->m_rx_buffer,
-						      rxElement.dataSize);
 			}
 		}
 	}
