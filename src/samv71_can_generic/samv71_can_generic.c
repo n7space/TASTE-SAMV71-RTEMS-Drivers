@@ -533,14 +533,15 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 
 		if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
 			size_t index = 0;
-			size_t packet_length = 0;
 			Escaper_start_encoder(&self->m_escaper);
-			while (index < length) {
-				packet_length = Escaper_encode_packet(
-					&self->m_escaper, data, length, &index);
+			size_t packet_length = Escaper_encode_packet(
+				&self->m_escaper, data, length, &index);
+			while (packet_length > 0) {
 				SamV71RtemsCanSendFrame(self, idType, id,
 							self->m_tx_buffer,
 							packet_length);
+				packet_length = Escaper_encode_packet(
+					&self->m_escaper, data, length, &index);
 			}
 		} else {
 			SamV71RtemsCanSendFrame(self, idType, id, data, length);
