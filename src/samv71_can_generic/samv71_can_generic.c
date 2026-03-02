@@ -144,20 +144,20 @@ static void mcan_int0_Handler(void *private_data)
 			rtems_semaphore_release(self->m_rx_semaphore);
 		assert(releaseResult == RTEMS_SUCCESSFUL);
 	}
+	if (status.hasTcOccurred) {
+		rtems_status_code releaseResult =
+			rtems_semaphore_release(self->m_tx_semaphore);
+		assert(releaseResult == RTEMS_SUCCESSFUL);
+	}
 }
 
-static bool waitForTransmissionFinished(Mcan *mcan, uint32_t timeout,
-					const uint8_t index)
+static bool waitForTransmissionFinished(Mcan *mcan, const uint8_t index)
 {
-	// Use busy loop to wait for a given bit in MCAN_TXBTO, what indicates that
-	// transmission is finished. Another implementation to consided is to use a
-	// semaphore and interrupt.
-	for (uint32_t counter = 0; counter < timeout; ++counter) {
-		if (Mcan_txBufferIsTransmissionFinished(mcan, index)) {
-			return true;
-		}
-	}
-	return false;
+	rtems_status_code obtainResult = rtems_semaphore_obtain(
+		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+	assert(obtainResult == RTEMS_SUCCESSFUL);
+
+	return Mcan_txBufferIsTransmissionFinished(mcan, index);
 }
 
 static void configurePioCan0(Pio *pio)
@@ -378,6 +378,14 @@ void SamV71RtemsCanInit(
 
 	assert(status_code == RTEMS_SUCCESSFUL);
 
+	status_code =
+		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
+				       1, // Initial value, unlocked
+				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
+				       0, // Priority ceiling
+				       &self->m_tx_semaphore);
+	assert(status_code == RTEMS_SUCCESSFUL);
+
 	rtems_task_config taskConfig = {
 		.name = SamV71Core_GenerateNewTaskName(),
 		.initial_priority = 1,
@@ -502,8 +510,7 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
-	bool result = waitForTransmissionFinished(&self->mcan,
-						  MCAN_WAIT_TIMEOUT, pushIndex);
+	bool result = waitForTransmissionFinished(&self->mcan, pushIndex);
 	assert(result);
 }
 
