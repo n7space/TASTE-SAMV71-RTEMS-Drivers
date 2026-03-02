@@ -151,13 +151,13 @@ static void mcan_int0_Handler(void *private_data)
 	}
 }
 
-static bool waitForTransmissionFinished(Mcan *mcan, const uint8_t index)
+static bool waitForTransmissionFinished(samv71_can_generic_private_data *self, const uint8_t index)
 {
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
 
-	return Mcan_txBufferIsTransmissionFinished(mcan, index);
+	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
 }
 
 static void configurePioCan0(Pio *pio)
@@ -369,22 +369,22 @@ void SamV71RtemsCanInit(
 		       "incorrect configuration, application-control-can-id cannot be used when maximum data length is greater than 8");
 	}
 
-	const rtems_status_code status_code =
+	const rtems_status_code status_code_create_rx_sem =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
 				       1, // Initial value, unlocked
 				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
 				       0, // Priority ceiling
 				       &self->m_rx_semaphore);
 
-	assert(status_code == RTEMS_SUCCESSFUL);
+	assert(status_code_create_rx_sem == RTEMS_SUCCESSFUL);
 
-	status_code =
+	const rtems_status_code status_code_create_tx_sem =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
 				       1, // Initial value, unlocked
 				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
 				       0, // Priority ceiling
 				       &self->m_tx_semaphore);
-	assert(status_code == RTEMS_SUCCESSFUL);
+	assert(status_code_create_tx_sem == RTEMS_SUCCESSFUL);
 
 	rtems_task_config taskConfig = {
 		.name = SamV71Core_GenerateNewTaskName(),
@@ -510,7 +510,7 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
-	bool result = waitForTransmissionFinished(&self->mcan, pushIndex);
+	bool result = waitForTransmissionFinished(self, pushIndex);
 	assert(result);
 }
 
