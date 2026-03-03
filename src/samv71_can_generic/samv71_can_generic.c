@@ -61,24 +61,27 @@ static void mcan_int0_Handler(void *private_data)
 		assert(releaseResult == RTEMS_SUCCESSFUL);
 	}
 	if (status.hasTcOccurred) {
-		self->m_transmission_completed = TRUE;
+		rtems_status_code releaseResult =
+			rtems_semaphore_release(self->m_tx_semaphore);
+		assert(releaseResult == RTEMS_SUCCESSFUL);
+		/* self->m_transmission_completed = TRUE; */
 	}
 }
 
 static bool waitForTransmissionFinished(samv71_can_generic_private_data *self,
 					const uint8_t index)
 {
-	while (!self->m_transmission_completed)
-		;
-	self->m_transmission_completed = FALSE;
-	if (Mcan_txBufferIsTransmissionFinished(&self->mcan, index)) {
-		return TRUE;
-	}
-	/* rtems_status_code obtainResult = rtems_semaphore_obtain( */
-	/* 	self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT); */
-	/* assert(obtainResult == RTEMS_SUCCESSFUL); */
+	/* while (!self->m_transmission_completed) */
+	/* 	; */
+	/* self->m_transmission_completed = FALSE; */
+	/* if (Mcan_txBufferIsTransmissionFinished(&self->mcan, index)) { */
+	/* 	return TRUE; */
+	/* } */
+	rtems_status_code obtainResult = rtems_semaphore_obtain(
+		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+	assert(obtainResult == RTEMS_SUCCESSFUL);
 
-	/* return Mcan_txBufferIsTransmissionFinished(&self->mcan, index); */
+	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
 }
 
 static void configurePioCan0(Pio *pio)
@@ -182,6 +185,7 @@ static void configureMcan1(samv71_can_generic_private_data *self)
 	configureMcanPck(self->m_config);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      mcan_int0_Handler, self);
+    rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 }
