@@ -35,7 +35,7 @@
 #include <Escaper.h>
 #include <Broker.h>
 
-#define MSGRAM_SIZE 512
+#define MSGRAM_SIZE 544
 #define MSGRAM_BYTE_SIZE (MSGRAM_SIZE * sizeof(uint32_t))
 #define MSGRAM_BYTE_SIZE_EXPONENT 11
 #define MSGRAM_STDID_FILTER_OFFSET 0
@@ -49,8 +49,8 @@
 #define MSGRAM_RXBUFFER_OFFSET 384
 #define MSGRAM_RXBUFFER_SIZE 0
 #define MSGRAM_TXEVENTINFO_OFFSET 384
-#define MSGRAM_TXEVENTINFO_SIZE 4
-#define MSGRAM_TXBUFFER_OFFSET 384
+#define MSGRAM_TXEVENTINFO_SIZE 32
+#define MSGRAM_TXBUFFER_OFFSET 416
 #define MSGRAM_TXBUFFER_SIZE 128
 
 #define Can_SAMV71_RTEMS_TLS_SIZE 16384
@@ -79,6 +79,7 @@ typedef struct __attribute__((aligned(4096))) {
 	char m_task_buffer[Can_SAMV71_RTEMS_TASK_BUFFER_SIZE];
 	rtems_id m_rx_semaphore;
 	rtems_id m_tx_semaphore;
+    volatile bool m_transmission_completed;
 	Escaper m_escaper;
 	uint8_t m_tx_buffer[8];
 	uint8_t m_rx_buffer[8];

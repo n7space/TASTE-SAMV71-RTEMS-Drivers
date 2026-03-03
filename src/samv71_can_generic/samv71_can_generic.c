@@ -37,6 +37,8 @@
 #include <system_spec.h>
 #include <SamV71Core.h>
 
+#include <rtems.h>
+
 #define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
@@ -44,93 +46,7 @@
 static bool isMcanPckConfigured = FALSE;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
 
-static const Mcan_Config defaultConfig = {
-    .msgRamBaseAddress = NULL,
-    .mode = Mcan_Mode_Normal,
-    .isFdEnabled = FALSE,
-    .nominalBitTiming = {
-      .bitRatePrescaler = 0u,
-      .synchronizationJump = 2u,
-      .timeSegmentAfterSamplePoint = 2u,
-      .timeSegmentBeforeSamplePoint = 15u,
-    },
-    .dataBitTiming = {
-      .bitRatePrescaler = 0u,
-      .synchronizationJump = 2u,
-      .timeSegmentAfterSamplePoint = 2u,
-      .timeSegmentBeforeSamplePoint = 15u,
-    },
-    .transmitterDelayCompensation = {
-      .isEnabled = FALSE,
-      .filter = 0u,
-      .offset = 0u,
-    },
-    .timestampClk = Mcan_TimestampClk_Internal,
-    .timestampTimeoutPrescaler = 14u,
-    .timeout = {
-      .isEnabled = FALSE,
-      .type = Mcan_TimeoutType_Continuous,
-      .period = 0u,
-    },
-    .standardIdFilter = {
-      .isIdRejected = FALSE,
-      .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
-      .filterListAddress = NULL,
-      .filterListSize = 0u,
-    },
-    .extendedIdFilter = {
-      .isIdRejected = FALSE,
-      .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
-      .filterListAddress = NULL,
-      .filterListSize = 0u,
-    },
-    .rxFifo0 = {
-      .isEnabled = TRUE,
-      .startAddress = NULL,
-      .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
-      .watermark = 0u,
-      .mode = Mcan_RxFifoOperationMode_Blocking,
-      .elementSize = Mcan_ElementSize_8,
-    },
-    .rxFifo1 = {
-      .isEnabled = FALSE,
-      .startAddress = NULL,
-      .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
-      .watermark = 0u,
-      .mode = Mcan_RxFifoOperationMode_Blocking,
-      .elementSize = Mcan_ElementSize_8,
-    },
-    .rxBuffer = {
-      .startAddress = NULL,
-      .elementSize = Mcan_ElementSize_8,
-    },
-    .txBuffer = {
-      .isEnabled = TRUE,
-      .startAddress = NULL,
-      .bufferSize = 0u,
-      .queueSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
-      .queueType = Mcan_TxQueueType_Fifo,
-      .elementSize = Mcan_ElementSize_8,
-    },
-    .txEventFifo = {.isEnabled = TRUE,
-                    .startAddress = NULL,
-                    .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
-                    .watermark = 0,
-    },
-    .interrupts = {
-      {
-        .isEnabled = TRUE,
-        .line = Mcan_InterruptLine_0,
-      },
-      {
-        .isEnabled = FALSE,
-        .line = Mcan_InterruptLine_1,
-      }
-    },
-    .isLine0InterruptEnabled = TRUE,
-    .isLine1InterruptEnabled = FALSE,
-    .wdtCounter = 0u,
-  };
+static volatile bool interruptOccurred = 0;
 
 static void mcan_int0_Handler(void *private_data)
 {
@@ -144,22 +60,25 @@ static void mcan_int0_Handler(void *private_data)
 			rtems_semaphore_release(self->m_rx_semaphore);
 		assert(releaseResult == RTEMS_SUCCESSFUL);
 	}
-	if (status.hasTcOccurred || status.hasTooOccurred ||
-	    status.hasTfeOccurred) {
-		rtems_status_code releaseResult =
-			rtems_semaphore_release(self->m_tx_semaphore);
-		assert(releaseResult == RTEMS_SUCCESSFUL);
+	if (status.hasTcOccurred) {
+		self->m_transmission_completed = TRUE;
 	}
 }
 
 static bool waitForTransmissionFinished(samv71_can_generic_private_data *self,
 					const uint8_t index)
 {
-	rtems_status_code obtainResult = rtems_semaphore_obtain(
-		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
-	assert(obtainResult == RTEMS_SUCCESSFUL);
+	while (!self->m_transmission_completed)
+		;
+	self->m_transmission_completed = FALSE;
+	if (Mcan_txBufferIsTransmissionFinished(&self->mcan, index)) {
+		return TRUE;
+	}
+	/* rtems_status_code obtainResult = rtems_semaphore_obtain( */
+	/* 	self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT); */
+	/* assert(obtainResult == RTEMS_SUCCESSFUL); */
 
-	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
+	/* return Mcan_txBufferIsTransmissionFinished(&self->mcan, index); */
 }
 
 static void configurePioCan0(Pio *pio)
@@ -252,6 +171,7 @@ static void configureMcan0(samv71_can_generic_private_data *self)
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
 				      mcan_int0_Handler, self);
+	rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
 }
@@ -268,6 +188,94 @@ static void configureMcan1(samv71_can_generic_private_data *self)
 
 static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 {
+	static const Mcan_Config defaultConfig = {
+    .msgRamBaseAddress = NULL,
+    .mode = Mcan_Mode_Normal,
+    .isFdEnabled = FALSE,
+    .nominalBitTiming = {
+      .bitRatePrescaler = 0u,
+      .synchronizationJump = 2u,
+      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentBeforeSamplePoint = 15u,
+    },
+    .dataBitTiming = {
+      .bitRatePrescaler = 0u,
+      .synchronizationJump = 2u,
+      .timeSegmentAfterSamplePoint = 2u,
+      .timeSegmentBeforeSamplePoint = 15u,
+    },
+    .transmitterDelayCompensation = {
+      .isEnabled = FALSE,
+      .filter = 0u,
+      .offset = 0u,
+    },
+    .timestampClk = Mcan_TimestampClk_Internal,
+    .timestampTimeoutPrescaler = 14u,
+    .timeout = {
+      .isEnabled = FALSE,
+      .type = Mcan_TimeoutType_Continuous,
+      .period = 0u,
+    },
+    .standardIdFilter = {
+      .isIdRejected = FALSE,
+      .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
+      .filterListAddress = NULL,
+      .filterListSize = 0u,
+    },
+    .extendedIdFilter = {
+      .isIdRejected = FALSE,
+      .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
+      .filterListAddress = NULL,
+      .filterListSize = 0u,
+    },
+    .rxFifo0 = {
+      .isEnabled = TRUE,
+      .startAddress = NULL,
+      .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
+      .watermark = 0u,
+      .mode = Mcan_RxFifoOperationMode_Blocking,
+      .elementSize = Mcan_ElementSize_8,
+    },
+    .rxFifo1 = {
+      .isEnabled = FALSE,
+      .startAddress = NULL,
+      .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
+      .watermark = 0u,
+      .mode = Mcan_RxFifoOperationMode_Blocking,
+      .elementSize = Mcan_ElementSize_8,
+    },
+    .rxBuffer = {
+      .startAddress = NULL,
+      .elementSize = Mcan_ElementSize_8,
+    },
+    .txBuffer = {
+      .isEnabled = TRUE,
+      .startAddress = NULL,
+      .bufferSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
+      .queueSize = 0u,
+      .queueType = Mcan_TxQueueType_Fifo,
+      .elementSize = Mcan_ElementSize_8,
+    },
+    .txEventFifo = {.isEnabled = TRUE,
+                    .startAddress = NULL,
+                    .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
+                    .watermark = 0,
+    },
+    .interrupts = {
+      {
+        .isEnabled = TRUE,
+        .line = Mcan_InterruptLine_0,
+      },
+      {
+        .isEnabled = FALSE,
+        .line = Mcan_InterruptLine_1,
+      }
+    },
+    .isLine0InterruptEnabled = TRUE,
+    .isLine1InterruptEnabled = FALSE,
+    .wdtCounter = 0u,
+  };
+
 	Mcan_Config conf = defaultConfig;
 	conf.msgRamBaseAddress = self->msgRam;
 	conf.standardIdFilter.filterListAddress =
@@ -298,16 +306,9 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.dataBitTiming.timeSegmentBeforeSamplePoint =
 		self->m_config->time_segments_before_sample_point;
 
-	for (int i = 0; i < Mcan_Interrupt_Count; ++i) {
-		conf.interrupts[i].isEnabled = TRUE;
-		conf.interrupts[i].line = Mcan_InterruptLine_0;
-	}
-	/* conf.interrupts[Mcan_Interrupt_Tc].isEnabled = TRUE; */
-	/* conf.interrupts[Mcan_Interrupt_Tc].line = Mcan_InterruptLine_0; */
-	/* conf.interrupts[Mcan_Interrupt_Tfe].isEnabled = TRUE; */
-	/* conf.interrupts[Mcan_Interrupt_Tfe].line = Mcan_InterruptLine_0; */
-	/* conf.interrupts[Mcan_Interrupt_Too].isEnabled = TRUE; */
-	/* conf.interrupts[Mcan_Interrupt_Too].line = Mcan_InterruptLine_0; */
+	conf.interrupts[Mcan_Interrupt_Tc].isEnabled = TRUE;
+	conf.interrupts[Mcan_Interrupt_Tc].line = Mcan_InterruptLine_0;
+
 	return conf;
 }
 
@@ -519,7 +520,7 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	uint8_t pushIndex = 0;
 	ErrorCode errCode = ErrorCode_NoError;
 	bool pushResult =
-		Mcan_txQueuePush(&self->mcan, txElement, &pushIndex, &errCode);
+		Mcan_txBufferAdd(&self->mcan, txElement, pushIndex, &errCode);
 	assert(pushResult);
 	assert(errCode == ErrorCode_NoError);
 
