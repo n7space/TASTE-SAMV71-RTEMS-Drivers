@@ -112,9 +112,9 @@ static const Mcan_Config defaultConfig = {
       .queueType = Mcan_TxQueueType_Fifo,
       .elementSize = Mcan_ElementSize_8,
     },
-    .txEventFifo = {.isEnabled = FALSE,
+    .txEventFifo = {.isEnabled = TRUE,
                     .startAddress = NULL,
-                    .size = 0,
+                    .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
                     .watermark = 0,
     },
     .interrupts = {
@@ -144,14 +144,16 @@ static void mcan_int0_Handler(void *private_data)
 			rtems_semaphore_release(self->m_rx_semaphore);
 		assert(releaseResult == RTEMS_SUCCESSFUL);
 	}
-	if (status.hasTcOccurred) {
+	if (status.hasTcOccurred || status.hasTooOccurred ||
+	    status.hasTfeOccurred) {
 		rtems_status_code releaseResult =
 			rtems_semaphore_release(self->m_tx_semaphore);
 		assert(releaseResult == RTEMS_SUCCESSFUL);
 	}
 }
 
-static bool waitForTransmissionFinished(samv71_can_generic_private_data *self, const uint8_t index)
+static bool waitForTransmissionFinished(samv71_can_generic_private_data *self,
+					const uint8_t index)
 {
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
@@ -276,7 +278,8 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.rxFifo1.startAddress = &self->msgRam[MSGRAM_RXFIFO1_OFFSET];
 	conf.rxBuffer.startAddress = &self->msgRam[MSGRAM_RXBUFFER_OFFSET];
 	conf.txBuffer.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
-	conf.txEventFifo.startAddress = &self->msgRam[MSGRAM_TXBUFFER_OFFSET];
+	conf.txEventFifo.startAddress =
+		&self->msgRam[MSGRAM_TXEVENTINFO_OFFSET];
 
 	conf.nominalBitTiming.bitRatePrescaler =
 		self->m_config->bit_rate_prescaler;
@@ -295,6 +298,16 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.dataBitTiming.timeSegmentBeforeSamplePoint =
 		self->m_config->time_segments_before_sample_point;
 
+	for (int i = 0; i < Mcan_Interrupt_Count; ++i) {
+		conf.interrupts[i].isEnabled = TRUE;
+		conf.interrupts[i].line = Mcan_InterruptLine_0;
+	}
+	/* conf.interrupts[Mcan_Interrupt_Tc].isEnabled = TRUE; */
+	/* conf.interrupts[Mcan_Interrupt_Tc].line = Mcan_InterruptLine_0; */
+	/* conf.interrupts[Mcan_Interrupt_Tfe].isEnabled = TRUE; */
+	/* conf.interrupts[Mcan_Interrupt_Tfe].line = Mcan_InterruptLine_0; */
+	/* conf.interrupts[Mcan_Interrupt_Too].isEnabled = TRUE; */
+	/* conf.interrupts[Mcan_Interrupt_Too].line = Mcan_InterruptLine_0; */
 	return conf;
 }
 
@@ -496,13 +509,13 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	txElement.idType = idType;
 	txElement.id = id;
 	txElement.frameType = Mcan_FrameType_Data;
-	txElement.marker = 0;
-	txElement.isTxEventStored = FALSE;
+	txElement.marker = 1;
+	txElement.isTxEventStored = TRUE;
 	txElement.isCanFdFormatEnabled = FALSE;
 	txElement.isBitRateSwitchingEnabled = FALSE;
 	txElement.dataSize = length;
 	txElement.data = data;
-	txElement.isInterruptEnabled = FALSE;
+	txElement.isInterruptEnabled = TRUE;
 	uint8_t pushIndex = 0;
 	ErrorCode errCode = ErrorCode_NoError;
 	bool pushResult =
