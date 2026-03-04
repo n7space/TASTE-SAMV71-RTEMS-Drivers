@@ -37,16 +37,11 @@
 #include <system_spec.h>
 #include <SamV71Core.h>
 
-#include <rtems.h>
-
-#define MCAN_WAIT_TIMEOUT 100000u
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
 
 static bool isMcanPckConfigured = FALSE;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
-
-static volatile bool interruptOccurred = 0;
 
 static void mcan_int0_Handler(void *private_data)
 {
@@ -64,19 +59,12 @@ static void mcan_int0_Handler(void *private_data)
 		rtems_status_code releaseResult =
 			rtems_semaphore_release(self->m_tx_semaphore);
 		assert(releaseResult == RTEMS_SUCCESSFUL);
-		/* self->m_transmission_completed = TRUE; */
 	}
 }
 
 static bool waitForTransmissionFinished(samv71_can_generic_private_data *self,
 					const uint8_t index)
 {
-	/* while (!self->m_transmission_completed) */
-	/* 	; */
-	/* self->m_transmission_completed = FALSE; */
-	/* if (Mcan_txBufferIsTransmissionFinished(&self->mcan, index)) { */
-	/* 	return TRUE; */
-	/* } */
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
@@ -174,7 +162,6 @@ static void configureMcan0(samv71_can_generic_private_data *self)
 
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
 				      mcan_int0_Handler, self);
-	rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_0));
 }
@@ -185,7 +172,7 @@ static void configureMcan1(samv71_can_generic_private_data *self)
 	configureMcanPck(self->m_config);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      mcan_int0_Handler, self);
-    rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
+	rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 }
@@ -265,16 +252,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
                     .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
                     .watermark = 0,
     },
-    .interrupts = {
-      {
-        .isEnabled = TRUE,
-        .line = Mcan_InterruptLine_0,
-      },
-      {
-        .isEnabled = FALSE,
-        .line = Mcan_InterruptLine_1,
-      }
-    },
+    .interrupts = {},
     .isLine0InterruptEnabled = TRUE,
     .isLine1InterruptEnabled = FALSE,
     .wdtCounter = 0u,
@@ -310,6 +288,8 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.dataBitTiming.timeSegmentBeforeSamplePoint =
 		self->m_config->time_segments_before_sample_point;
 
+	conf.interrupts[Mcan_Interrupt_Rf0n].isEnabled = TRUE;
+	conf.interrupts[Mcan_Interrupt_Rf0n].line = Mcan_InterruptLine_0;
 	conf.interrupts[Mcan_Interrupt_Tc].isEnabled = TRUE;
 	conf.interrupts[Mcan_Interrupt_Tc].line = Mcan_InterruptLine_0;
 
@@ -389,7 +369,7 @@ void SamV71RtemsCanInit(
 
 	const rtems_status_code status_code_create_rx_sem =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
-				       1, // Initial value, unlocked
+				       0, // Initial value, locked
 				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
 				       0, // Priority ceiling
 				       &self->m_rx_semaphore);
@@ -398,7 +378,7 @@ void SamV71RtemsCanInit(
 
 	const rtems_status_code status_code_create_tx_sem =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
-				       1, // Initial value, unlocked
+				       0, // Initial value, locked
 				       RTEMS_SIMPLE_BINARY_SEMAPHORE,
 				       0, // Priority ceiling
 				       &self->m_tx_semaphore);
