@@ -173,7 +173,6 @@ static void configureMcan1(samv71_can_generic_private_data *self)
 	configureMcanPck(self->m_config);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      mcan_int0_Handler, self);
-	rtems_interrupt_set_priority(Nvic_Irq_Mcan0_Irq0, 0);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
 	Mcan_init(&self->mcan, Mcan_getDeviceRegisters(Mcan_Id_1));
 }
@@ -496,7 +495,7 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	txElement.id = id;
 	txElement.frameType = Mcan_FrameType_Data;
 	txElement.marker = 1;
-	txElement.isTxEventStored = TRUE;
+	txElement.isTxEventStored = FALSE;
 	txElement.isCanFdFormatEnabled = FALSE;
 	txElement.isBitRateSwitchingEnabled = FALSE;
 	txElement.dataSize = length;
