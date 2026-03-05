@@ -78,6 +78,7 @@ typedef struct __attribute__((aligned(4096))) {
 	RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
 	char m_task_buffer[Can_SAMV71_RTEMS_TASK_BUFFER_SIZE];
 	rtems_id m_rx_semaphore;
+	rtems_id m_tx_semaphore;
 	Escaper m_escaper;
 	uint8_t m_tx_buffer[8];
 	uint8_t m_rx_buffer[8];
