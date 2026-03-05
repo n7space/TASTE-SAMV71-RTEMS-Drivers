@@ -37,6 +37,7 @@
 #include <system_spec.h>
 #include <SamV71Core.h>
 
+#define SAMV71_CAN_SEND_TIMEOUT 4 /* in systicks */
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
 
@@ -66,7 +67,7 @@ static bool waitForTransmissionFinished(samv71_can_generic_private_data *self,
 					const uint8_t index)
 {
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
-		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+		self->m_tx_semaphore, RTEMS_WAIT, SAMV71_CAN_SEND_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
 
 	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
