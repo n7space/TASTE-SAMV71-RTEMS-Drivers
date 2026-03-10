@@ -184,7 +184,7 @@ Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 	}
 }
 
-/* for 144-pin package SAMV71, the following pins are used:
+/* for 144-pin package SAMV71, the following pins are UART pins:
  * UART0:
  *   - URXD0 - PA9 (PIO peripheral A)
  *   - UTXD0 - PA10 (PIO peripheral A)
@@ -200,6 +200,9 @@ Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
  * UART4:
  *   - URXD4 - PD18 (PIO peripheral C)
  *   - UTXD4 - PD3, PD19 (PIO peripheral C)
+ *
+ * NOTE: It is possible that more than one port is listed as UTXDx,
+ *       In such case, the driver is designed to use only one pin.
  */
 
 inline static void
