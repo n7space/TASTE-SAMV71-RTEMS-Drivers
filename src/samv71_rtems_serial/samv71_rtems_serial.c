@@ -693,8 +693,8 @@ void Samv71RtemsSerialInit(
 		(samv71_rtems_serial_private_data *)private_data;
 
 	self->m_ip_device_bus_id = bus_id;
-	self->m_raw_mode = device_configuration->raw_mode ==
-			   Serial_SamV71_Rtems_Raw_Mode_T_enabled;
+	self->m_raw_mode = device_configuration->transmit_mode ==
+			   Serial_SamV71_Rtems_Transmit_Mode_T_raw_single_byte;
 
 	SamV71RtemsSerialInit_uart_init(self, device_configuration);
 	SamV71RtemsSerialInit_rx_handler(self);

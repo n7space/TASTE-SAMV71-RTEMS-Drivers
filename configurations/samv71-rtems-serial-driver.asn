@@ -6,13 +6,13 @@ Serial-SamV71-Rtems-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b
 
 Serial-SamV71-Rtems-Parity-T    ::= ENUMERATED {even, odd, none}
 
-Serial-SamV71-Rtems-Raw-Mode-T    ::= ENUMERATED {disabled, enabled}
+Serial-SamV71-Rtems-Transmit-Mode-T    ::= ENUMERATED {escaped-packets, raw-single-byte}
 
 Serial-SamV71-Rtems-Conf-T ::= SEQUENCE {
    devname        Serial-SamV71-Rtems-Device-T,
    speed          Serial-SamV71-Rtems-Baudrate-T,
    parity         Serial-SamV71-Rtems-Parity-T,
-   raw-mode       Serial-SamV71-Rtems-Raw-Mode-T DEFAULT disabled
+   transmit-mode  Serial-SamV71-Rtems-Transmit-Mode-T DEFAULT escaped-packets
 }
 
 END
