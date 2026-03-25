@@ -19,6 +19,7 @@
 
 #include "samv71_rtems_serial.h"
 
+#include "Broker.h"
 #include <rtems.h>
 #include <assert.h>
 
@@ -635,8 +636,12 @@ SamV71RtemsSerialInit_rx_handler(samv71_rtems_serial_private_data *const self)
 	self->m_uart_rx_handler.lengthArg = self;
 	self->m_uart_rx_handler.characterArg = self;
 	self->m_uart_rx_handler.targetCharacter = STOP_BYTE;
-	self->m_uart_rx_handler.targetLength =
-		Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
+	if (self->m_raw_mode) {
+		self->m_uart_rx_handler.targetLength = 1;
+	} else {
+		self->m_uart_rx_handler.targetLength =
+			Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
+	}
 
 	const rtems_status_code status_code =
 		rtems_semaphore_create(SamV71Core_GenerateNewSemaphoreName(),
@@ -688,6 +693,8 @@ void Samv71RtemsSerialInit(
 		(samv71_rtems_serial_private_data *)private_data;
 
 	self->m_ip_device_bus_id = bus_id;
+	self->m_raw_mode = device_configuration->transmit_mode ==
+			   Serial_SamV71_Rtems_Transmit_Mode_T_raw_single_byte;
 
 	SamV71RtemsSerialInit_uart_init(self, device_configuration);
 	SamV71RtemsSerialInit_rx_handler(self);
@@ -740,7 +747,10 @@ void Samv71RtemsSerialPoll(void *private_data)
 		(samv71_rtems_serial_private_data *)private_data;
 	size_t length = 0;
 
-	Escaper_start_decoder(&self->m_escaper);
+	if (!self->m_raw_mode) {
+		// if raw mode is disabled, start the Escaper's decoder
+		Escaper_start_decoder(&self->m_escaper);
+	}
 	rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_rx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(obtainResult == RTEMS_SUCCESSFUL);
@@ -761,12 +771,20 @@ void Samv71RtemsSerialPoll(void *private_data)
 			ByteFifo_pull(&self->m_hal_uart.rxFifo,
 				      &self->m_recv_buffer[i]);
 			SamV71RtemsSerialInterrupt_rx_enable(self);
+			if (self->m_raw_mode) {
+				// if raw mode is enabled, call the Broker directly
+				Broker_receive_packet(self->m_ip_device_bus_id,
+						      &self->m_recv_buffer[i],
+						      1);
+			}
 		}
-
-		Escaper_decode_packet(&self->m_escaper,
-				      self->m_ip_device_bus_id,
-				      self->m_recv_buffer, length,
-				      Broker_receive_packet);
+		if (!self->m_raw_mode) {
+			// if raw mode is disabled, use Escaper
+			Escaper_decode_packet(&self->m_escaper,
+					      self->m_ip_device_bus_id,
+					      self->m_recv_buffer, length,
+					      Broker_receive_packet);
+		}
 	}
 }
 
@@ -778,17 +796,33 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 	size_t index = 0;
 	size_t packetLength = 0;
 
-	Escaper_start_encoder(&self->m_escaper);
-	while (index < length) {
-		packetLength = Escaper_encode_packet(&self->m_escaper, data,
-						     length, &index);
+	if (!self->m_raw_mode) {
+		// if raw mode is disabled, start the Escaper's encoder
+		// and use it to process all the data before sending
+		Escaper_start_encoder(&self->m_escaper);
+		while (index < length) {
+			packetLength = Escaper_encode_packet(
+				&self->m_escaper, data, length, &index);
+			// wait for completion of previous transfer
+			const rtems_status_code obtainResult =
+				rtems_semaphore_obtain(self->m_tx_semaphore,
+						       RTEMS_WAIT,
+						       RTEMS_NO_TIMEOUT);
+			assert(obtainResult == RTEMS_SUCCESSFUL);
+			SamV71RtemsSerialInit_uart_write(
+				&self->m_hal_uart,
+				(uint8_t *const)&self->m_encoded_packet_buffer,
+				packetLength, &self->m_uart_tx_handler);
+		}
+	} else {
+		// otherwise skip the encoding and send the data directly
+		// wait for completion of previous transfer
 		const rtems_status_code obtainResult = rtems_semaphore_obtain(
 			self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 		assert(obtainResult == RTEMS_SUCCESSFUL);
-		SamV71RtemsSerialInit_uart_write(
-			&self->m_hal_uart,
-			(uint8_t *const)&self->m_encoded_packet_buffer,
-			packetLength, &self->m_uart_tx_handler);
+		SamV71RtemsSerialInit_uart_write(&self->m_hal_uart, data,
+						 length,
+						 &self->m_uart_tx_handler);
 	}
 }
 
