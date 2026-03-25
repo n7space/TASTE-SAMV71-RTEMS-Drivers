@@ -69,6 +69,24 @@ void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T *pVal)
 	(*(pVal)) = Serial_SamV71_Rtems_Parity_T_even;
 }
 
+flag Serial_SamV71_Rtems_Raw_Mode_T_IsConstraintValid(
+	const Serial_SamV71_Rtems_Raw_Mode_T *pVal, int *pErrCode)
+{
+	flag ret = TRUE;
+	ret = ((((*(pVal)) == disabled)) || (((*(pVal)) == enabled)));
+	*pErrCode = ret ? 0 : ERR_SERIAL_SAMV71_RTEMS_RAW_MODE_T;
+
+	return ret;
+}
+
+void Serial_SamV71_Rtems_Raw_Mode_T_Initialize(
+	Serial_SamV71_Rtems_Raw_Mode_T *pVal)
+{
+	(void)pVal;
+
+	(*(pVal)) = disabled;
+}
+
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Conf_T *pVal, int *pErrCode)
 {
@@ -81,6 +99,12 @@ flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 		if (ret) {
 			ret = Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
 				(&(pVal->parity)), pErrCode);
+			if (ret) {
+				if (pVal->exist.raw_mode) {
+					ret = Serial_SamV71_Rtems_Raw_Mode_T_IsConstraintValid(
+						(&(pVal->raw_mode)), pErrCode);
+				}
+			} /*COVERAGE_IGNORE*/
 		} /*COVERAGE_IGNORE*/
 	} /*COVERAGE_IGNORE*/
 
@@ -97,4 +121,7 @@ void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T *pVal)
 	Serial_SamV71_Rtems_Baudrate_T_Initialize((&(pVal->speed)));
 	/*set parity */
 	Serial_SamV71_Rtems_Parity_T_Initialize((&(pVal->parity)));
+	/*set raw_mode */
+	pVal->exist.raw_mode = 1;
+	pVal->raw_mode = disabled;
 }

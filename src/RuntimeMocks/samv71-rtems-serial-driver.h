@@ -76,18 +76,37 @@ flag Serial_SamV71_Rtems_Parity_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Parity_T *pVal, int *pErrCode);
 
 void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T *pVal);
+typedef enum { disabled = 0, enabled = 1 } Serial_SamV71_Rtems_Raw_Mode_T;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Raw_Mode_T_disabled disabled
+#define Serial_SamV71_Rtems_Raw_Mode_T_enabled enabled
+
+#define ERR_SERIAL_SAMV71_RTEMS_RAW_MODE_T 66 /*disabled | enabled*/
+flag Serial_SamV71_Rtems_Raw_Mode_T_IsConstraintValid(
+	const Serial_SamV71_Rtems_Raw_Mode_T *pVal, int *pErrCode);
+
+void Serial_SamV71_Rtems_Raw_Mode_T_Initialize(
+	Serial_SamV71_Rtems_Raw_Mode_T *pVal);
 /*-- Serial_SamV71_Rtems_Conf_T --------------------------------------------*/
+typedef struct {
+	unsigned long raw_mode : 1;
+} Serial_SamV71_Rtems_Conf_T_exist;
 typedef struct {
 	Serial_SamV71_Rtems_Device_T devname;
 	Serial_SamV71_Rtems_Baudrate_T speed;
 	Serial_SamV71_Rtems_Parity_T parity;
+	Serial_SamV71_Rtems_Raw_Mode_T raw_mode;
+
+	Serial_SamV71_Rtems_Conf_T_exist exist;
 
 } Serial_SamV71_Rtems_Conf_T;
 
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T 96 /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME_2 71 /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2 81 /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2 91 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T 111 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME_2 76 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2 86 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2 96 /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_RAW_MODE_2 106 /**/
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(
 	const Serial_SamV71_Rtems_Conf_T *pVal, int *pErrCode);
 
