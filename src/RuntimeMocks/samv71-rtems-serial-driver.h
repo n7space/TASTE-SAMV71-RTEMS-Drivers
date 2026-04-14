@@ -10,58 +10,226 @@ extern "C" {
 #endif
 
 
+/*-- Serial_SamV71_Rtems_Device_T --------------------------------------------*/
+/*-- Serial_SamV71_Rtems_Device_T_uart0 --------------------------------------------*/
 typedef enum {
-    uart0 = 0,
-    uart1 = 1,
-    uart2 = 2,
-    uart3 = 3,
-    uart4 = 4
-} Serial_SamV71_Rtems_Device_T;
+    pa10 = 0
+} Serial_SamV71_Rtems_Device_T_uart0_tx;
 
 // please use the following macros to avoid breaking code.
-#define Serial_SamV71_Rtems_Device_T_uart0 uart0
-#define Serial_SamV71_Rtems_Device_T_uart1 uart1
-#define Serial_SamV71_Rtems_Device_T_uart2 uart2
-#define Serial_SamV71_Rtems_Device_T_uart3 uart3
-#define Serial_SamV71_Rtems_Device_T_uart4 uart4
+#define Serial_SamV71_Rtems_Device_T_uart0_tx_pa10 pa10
+typedef enum {
+    pa9 = 0
+} Serial_SamV71_Rtems_Device_T_uart0_rx;
 
-#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T		51  /*uart0 | uart1 | uart2 | uart3 | uart4*/
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart0_rx_pa9 pa9
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_uart0_tx tx;
+    Serial_SamV71_Rtems_Device_T_uart0_rx rx;
+
+} Serial_SamV71_Rtems_Device_T_uart0;
+/*-- Serial_SamV71_Rtems_Device_T_uart1 --------------------------------------------*/
+typedef enum {
+    pa4 = 0,
+    pa6 = 1,
+    uart1_tx_pd26 = 2
+} Serial_SamV71_Rtems_Device_T_uart1_tx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart1_tx_pa4 pa4
+#define Serial_SamV71_Rtems_Device_T_uart1_tx_pa6 pa6
+#define Serial_SamV71_Rtems_Device_T_uart1_tx_pd26 uart1_tx_pd26
+typedef enum {
+    pa5 = 0
+} Serial_SamV71_Rtems_Device_T_uart1_rx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart1_rx_pa5 pa5
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_uart1_tx tx;
+    Serial_SamV71_Rtems_Device_T_uart1_rx rx;
+
+} Serial_SamV71_Rtems_Device_T_uart1;
+/*-- Serial_SamV71_Rtems_Device_T_uart2 --------------------------------------------*/
+typedef enum {
+    uart2_tx_pd26 = 0
+} Serial_SamV71_Rtems_Device_T_uart2_tx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart2_tx_pd26 uart2_tx_pd26
+typedef enum {
+    pd25 = 0
+} Serial_SamV71_Rtems_Device_T_uart2_rx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart2_rx_pd25 pd25
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_uart2_tx tx;
+    Serial_SamV71_Rtems_Device_T_uart2_rx rx;
+
+} Serial_SamV71_Rtems_Device_T_uart2;
+/*-- Serial_SamV71_Rtems_Device_T_uart3 --------------------------------------------*/
+typedef enum {
+    pd30 = 0,
+    pd31 = 1
+} Serial_SamV71_Rtems_Device_T_uart3_tx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart3_tx_pd30 pd30
+#define Serial_SamV71_Rtems_Device_T_uart3_tx_pd31 pd31
+typedef enum {
+    pd28 = 0
+} Serial_SamV71_Rtems_Device_T_uart3_rx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart3_rx_pd28 pd28
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_uart3_tx tx;
+    Serial_SamV71_Rtems_Device_T_uart3_rx rx;
+
+} Serial_SamV71_Rtems_Device_T_uart3;
+/*-- Serial_SamV71_Rtems_Device_T_uart4 --------------------------------------------*/
+typedef enum {
+    pd3 = 0,
+    pd19 = 1
+} Serial_SamV71_Rtems_Device_T_uart4_tx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart4_tx_pd3 pd3
+#define Serial_SamV71_Rtems_Device_T_uart4_tx_pd19 pd19
+typedef enum {
+    pd18 = 0
+} Serial_SamV71_Rtems_Device_T_uart4_rx;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Device_T_uart4_rx_pd18 pd18
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_uart4_tx tx;
+    Serial_SamV71_Rtems_Device_T_uart4_rx rx;
+
+} Serial_SamV71_Rtems_Device_T_uart4;
+
+typedef enum {
+    Serial_SamV71_Rtems_Device_T_NONE,
+    uart0_PRESENT,
+    uart1_PRESENT,
+    uart2_PRESENT,
+    uart3_PRESENT,
+    uart4_PRESENT
+} Serial_SamV71_Rtems_Device_T_selection;
+
+typedef union {
+    Serial_SamV71_Rtems_Device_T_uart0 uart0;
+    Serial_SamV71_Rtems_Device_T_uart1 uart1;
+    Serial_SamV71_Rtems_Device_T_uart2 uart2;
+    Serial_SamV71_Rtems_Device_T_uart3 uart3;
+    Serial_SamV71_Rtems_Device_T_uart4 uart4;
+} Serial_SamV71_Rtems_Device_T_unchecked_union;
+
+typedef struct {
+    Serial_SamV71_Rtems_Device_T_selection kind;
+
+    Serial_SamV71_Rtems_Device_T_unchecked_union u;
+} Serial_SamV71_Rtems_Device_T;
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART0_TX		181  /*pa10*/
+flag Serial_SamV71_Rtems_Device_T_uart0_tx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart0_tx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART0_RX		186  /*pa9*/
+flag Serial_SamV71_Rtems_Device_T_uart0_rx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart0_rx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART0		191  /**/
+flag Serial_SamV71_Rtems_Device_T_uart0_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart0* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART1_TX		196  /*pa4 | pa6 | pd26*/
+flag Serial_SamV71_Rtems_Device_T_uart1_tx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart1_tx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART1_RX		201  /*pa5*/
+flag Serial_SamV71_Rtems_Device_T_uart1_rx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart1_rx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART1		206  /**/
+flag Serial_SamV71_Rtems_Device_T_uart1_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart1* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART2_TX		211  /*pd26*/
+flag Serial_SamV71_Rtems_Device_T_uart2_tx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart2_tx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART2_RX		216  /*pd25*/
+flag Serial_SamV71_Rtems_Device_T_uart2_rx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart2_rx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART2		221  /**/
+flag Serial_SamV71_Rtems_Device_T_uart2_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart2* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART3_TX		226  /*pd30 | pd31*/
+flag Serial_SamV71_Rtems_Device_T_uart3_tx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart3_tx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART3_RX		231  /*pd28*/
+flag Serial_SamV71_Rtems_Device_T_uart3_rx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart3_rx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART3		236  /**/
+flag Serial_SamV71_Rtems_Device_T_uart3_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart3* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART4_TX		241  /*pd3 | pd19*/
+flag Serial_SamV71_Rtems_Device_T_uart4_tx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart4_tx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART4_RX		246  /*pd18*/
+flag Serial_SamV71_Rtems_Device_T_uart4_rx_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart4_rx* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T_UART4		251  /**/
+flag Serial_SamV71_Rtems_Device_T_uart4_IsConstraintValid(const Serial_SamV71_Rtems_Device_T_uart4* pVal, int* pErrCode);
+
+#define ERR_SERIAL_SAMV71_RTEMS_DEVICE_T		256  /**/
 flag Serial_SamV71_Rtems_Device_T_IsConstraintValid(const Serial_SamV71_Rtems_Device_T* pVal, int* pErrCode);
 
+void Serial_SamV71_Rtems_Device_T_uart0_tx_Initialize(Serial_SamV71_Rtems_Device_T_uart0_tx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart0_rx_Initialize(Serial_SamV71_Rtems_Device_T_uart0_rx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart0_Initialize(Serial_SamV71_Rtems_Device_T_uart0* pVal);
+void Serial_SamV71_Rtems_Device_T_uart1_tx_Initialize(Serial_SamV71_Rtems_Device_T_uart1_tx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart1_rx_Initialize(Serial_SamV71_Rtems_Device_T_uart1_rx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart1_Initialize(Serial_SamV71_Rtems_Device_T_uart1* pVal);
+void Serial_SamV71_Rtems_Device_T_uart2_tx_Initialize(Serial_SamV71_Rtems_Device_T_uart2_tx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart2_rx_Initialize(Serial_SamV71_Rtems_Device_T_uart2_rx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart2_Initialize(Serial_SamV71_Rtems_Device_T_uart2* pVal);
+void Serial_SamV71_Rtems_Device_T_uart3_tx_Initialize(Serial_SamV71_Rtems_Device_T_uart3_tx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart3_rx_Initialize(Serial_SamV71_Rtems_Device_T_uart3_rx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart3_Initialize(Serial_SamV71_Rtems_Device_T_uart3* pVal);
+void Serial_SamV71_Rtems_Device_T_uart4_tx_Initialize(Serial_SamV71_Rtems_Device_T_uart4_tx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart4_rx_Initialize(Serial_SamV71_Rtems_Device_T_uart4_rx* pVal);
+void Serial_SamV71_Rtems_Device_T_uart4_Initialize(Serial_SamV71_Rtems_Device_T_uart4* pVal);
 void Serial_SamV71_Rtems_Device_T_Initialize(Serial_SamV71_Rtems_Device_T* pVal);
 typedef enum {
-    Serial_SamV71_Rtems_Baudrate_T_b9600 = 0,
-    Serial_SamV71_Rtems_Baudrate_T_b19200 = 1,
-    Serial_SamV71_Rtems_Baudrate_T_b38400 = 2,
-    Serial_SamV71_Rtems_Baudrate_T_b57600 = 3,
-    Serial_SamV71_Rtems_Baudrate_T_b115200 = 4,
-    Serial_SamV71_Rtems_Baudrate_T_b230400 = 5
+    b9600 = 0,
+    b19200 = 1,
+    b38400 = 2,
+    b57600 = 3,
+    b115200 = 4,
+    b230400 = 5
 } Serial_SamV71_Rtems_Baudrate_T;
 
 // please use the following macros to avoid breaking code.
-#define Serial_SamV71_Rtems_Baudrate_T_b9600 Serial_SamV71_Rtems_Baudrate_T_b9600
-#define Serial_SamV71_Rtems_Baudrate_T_b19200 Serial_SamV71_Rtems_Baudrate_T_b19200
-#define Serial_SamV71_Rtems_Baudrate_T_b38400 Serial_SamV71_Rtems_Baudrate_T_b38400
-#define Serial_SamV71_Rtems_Baudrate_T_b57600 Serial_SamV71_Rtems_Baudrate_T_b57600
-#define Serial_SamV71_Rtems_Baudrate_T_b115200 Serial_SamV71_Rtems_Baudrate_T_b115200
-#define Serial_SamV71_Rtems_Baudrate_T_b230400 Serial_SamV71_Rtems_Baudrate_T_b230400
+#define Serial_SamV71_Rtems_Baudrate_T_b9600 b9600
+#define Serial_SamV71_Rtems_Baudrate_T_b19200 b19200
+#define Serial_SamV71_Rtems_Baudrate_T_b38400 b38400
+#define Serial_SamV71_Rtems_Baudrate_T_b57600 b57600
+#define Serial_SamV71_Rtems_Baudrate_T_b115200 b115200
+#define Serial_SamV71_Rtems_Baudrate_T_b230400 b230400
 
-#define ERR_SERIAL_SAMV71_RTEMS_BAUDRATE_T		56  /*b9600 | b19200 | b38400 | b57600 | b115200 | b230400*/
+#define ERR_SERIAL_SAMV71_RTEMS_BAUDRATE_T		261  /*b9600 | b19200 | b38400 | b57600 | b115200 | b230400*/
 flag Serial_SamV71_Rtems_Baudrate_T_IsConstraintValid(const Serial_SamV71_Rtems_Baudrate_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Baudrate_T_Initialize(Serial_SamV71_Rtems_Baudrate_T* pVal);
 typedef enum {
-    Serial_SamV71_Rtems_Parity_T_even = 0,
-    Serial_SamV71_Rtems_Parity_T_odd = 1,
+    even = 0,
+    odd = 1,
     none = 2
 } Serial_SamV71_Rtems_Parity_T;
 
 // please use the following macros to avoid breaking code.
-#define Serial_SamV71_Rtems_Parity_T_even Serial_SamV71_Rtems_Parity_T_even
-#define Serial_SamV71_Rtems_Parity_T_odd Serial_SamV71_Rtems_Parity_T_odd
+#define Serial_SamV71_Rtems_Parity_T_even even
+#define Serial_SamV71_Rtems_Parity_T_odd odd
 #define Serial_SamV71_Rtems_Parity_T_none none
 
-#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T		61  /*even | odd | none*/
+#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T		266  /*even | odd | none*/
 flag Serial_SamV71_Rtems_Parity_T_IsConstraintValid(const Serial_SamV71_Rtems_Parity_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T* pVal);
@@ -74,7 +242,7 @@ typedef enum {
 #define Serial_SamV71_Rtems_Transmit_Mode_T_escaped_packets escaped_packets
 #define Serial_SamV71_Rtems_Transmit_Mode_T_raw_single_byte raw_single_byte
 
-#define ERR_SERIAL_SAMV71_RTEMS_TRANSMIT_MODE_T		66  /*escaped-packets | raw-single-byte*/
+#define ERR_SERIAL_SAMV71_RTEMS_TRANSMIT_MODE_T		271  /*escaped-packets | raw-single-byte*/
 flag Serial_SamV71_Rtems_Transmit_Mode_T_IsConstraintValid(const Serial_SamV71_Rtems_Transmit_Mode_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Transmit_Mode_T_Initialize(Serial_SamV71_Rtems_Transmit_Mode_T* pVal);
@@ -92,11 +260,11 @@ typedef struct {
 
 } Serial_SamV71_Rtems_Conf_T;
 
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T		111  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME_2		76  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2		86  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2		96  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_TRANSMIT_MODE_2		106  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T		311  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME		276  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2		286  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2		296  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_TRANSMIT_MODE_2		306  /**/
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(const Serial_SamV71_Rtems_Conf_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T* pVal);

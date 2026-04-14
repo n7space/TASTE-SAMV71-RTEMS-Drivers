@@ -19,7 +19,17 @@ const Serial_CCSDS_Linux_Conf_T pohidrv_node_1_uart0 = {
 	.exist = { .speed = 1, .parity = 1, .bits = 1, .use_paritybit = 1 }
 };
 const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart0 = {
-	.devname = uart4,
-	.speed = Serial_SamV71_Rtems_Baudrate_T_b9600,
-	.parity = Serial_SamV71_Rtems_Parity_T_even
+    .devname = {
+        .kind = uart4_PRESENT,
+        .u = { .uart4 = {
+        .tx = Serial_SamV71_Rtems_Device_T_uart4_tx_pd19,
+        .rx = Serial_SamV71_Rtems_Device_T_uart4_rx_pd18
+    }}
+    },
+    .speed = Serial_SamV71_Rtems_Baudrate_T_b9600,
+    .parity = Serial_SamV71_Rtems_Parity_T_even,
+    .transmit_mode = Serial_SamV71_Rtems_Transmit_Mode_T_escaped_packets,
+    .exist = {
+        .transmit_mode = 1
+    }
 };
