@@ -386,6 +386,9 @@ static inline Pmc_PeripheralId Samv71RtemsSerial_get_periph_uart_id(Uart_Id id)
 		return Pmc_PeripheralId_Uart3;
 	case Uart_Id_4:
 		return Pmc_PeripheralId_Uart4;
+	default:
+		assert(false);
+		return Pmc_PeripheralId_Uart0;
 	}
 }
 
