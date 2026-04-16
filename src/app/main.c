@@ -52,20 +52,6 @@ deliver_function interface_to_deliver_function[INTERFACE_MAX_ID];
 
 static samv71_rtems_serial_private_data driver_private_data;
 
-const Serial_CCSDS_Linux_Conf_T pohidrv_node_1_uart0 = {
-	.devname = "/home/taste/SAMV71",
-	.speed = Serial_CCSDS_Linux_Baudrate_T_b9600,
-	.parity = Serial_CCSDS_Linux_Parity_T_even,
-	.bits = 8UL,
-	.use_paritybit = FALSE,
-	.exist = { .speed = 1, .parity = 1, .bits = 1, .use_paritybit = 1 }
-};
-const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart0 = {
-	.devname = uart4,
-	.speed = Serial_SamV71_Rtems_Baudrate_T_b9600,
-	.parity = Serial_SamV71_Rtems_Parity_T_even,
-};
-
 const uint8_t test_buffer[] = { '\x00', '\xff' };
 const size_t test_buffer_size = sizeof(test_buffer);
 
@@ -74,7 +60,7 @@ rtems_task Init(rtems_task_argument argument)
 	Hal_Init();
 	Samv71RtemsSerialInit(&driver_private_data, BUS_BUS_1,
 			      DEVICE_NODE_2_UART0, &pohidrv_node_2_uart0,
-			      &pohidrv_node_1_uart0);
+			      NULL);
 
 	Samv71RtemsSerialSend(&driver_private_data, test_buffer,
 			      test_buffer_size);
