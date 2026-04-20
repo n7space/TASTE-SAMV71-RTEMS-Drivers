@@ -185,98 +185,192 @@ Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 	}
 }
 
-/*
- * NOTE: It is possible that more than one port is listed as UTXDx,
- *       In such case, the driver is designed to use only one pin.
+typedef struct {
+	Pio_Port port;
+	Pmc_PeripheralId peripheralId;
+	uint32_t pinMask;
+	Pio_Control control;
+} Samv71RtemsSerial_UartPinConfig;
 
- * for 144-pin package SAMV71, the following pins are UART pins
- *       (pins used by driver are marked by '*')
+/*
+ * Available UART pins configurations for 144-pin package SAMV71:
  * UART0:
- *   - URXD0 - PA9* (PIO peripheral A)
- *   - UTXD0 - PA10* (PIO peripheral A)
+ *   - URXD0 - PA9 (PIO peripheral A)
+ *   - UTXD0 - PA10 (PIO peripheral A)
  * UART1:
- *   - URXD1 - PA5* (PIO peripheral C)
- *   - UTXD1 - PA4, PA6* (PIO peripheral C), PD26 (PIO peripheral D)
+ *   - URXD1 - PA5 (PIO peripheral C)
+ *   - UTXD1 - PA4, PA6 (PIO peripheral C), PD26 (PIO peripheral D)
  * UART2:
- *   - URXD2 - PD25* (PIO peripheral C)
- *   - UTXD2 - PD26* (PIO peripheral C)
+ *   - URXD2 - PD25 (PIO peripheral C)
+ *   - UTXD2 - PD26 (PIO peripheral C)
  * UART3:
- *   - URXD3 - PD28* (PIO peripheral A)
- *   - UTXD3 - PD30* (PIO peripheral A), PD31 (PIO peripheral A)
+ *   - URXD3 - PD28 (PIO peripheral A)
+ *   - UTXD3 - PD30 (PIO peripheral A), PD31 (PIO peripheral A)
  * UART4:
- *   - URXD4 - PD18* (PIO peripheral C)
- *   - UTXD4 - PD3, PD19* (PIO peripheral C)
- *
+ *   - URXD4 - PD18 (PIO peripheral C)
+ *   - UTXD4 - PD3, PD19 (PIO peripheral C)
  */
 
-inline static void
-Samv71RtemsSerial_uart_init_uart0_pio(Pio_Port *const port,
-				      Pio_Port_Config *const pioConfigTx,
-				      Pio_Port_Config *const pioConfigRx)
+static inline Samv71RtemsSerial_UartPinConfig
+Samv71RtemsSerial_make_uart_pin_config(Pio_Port port,
+				       Pmc_PeripheralId peripheralId,
+				       uint32_t pinMask, Pio_Control control)
 {
-	*port = Pio_Port_A;
+	Samv71RtemsSerial_UartPinConfig pinConfig = {
+		.port = port,
+		.peripheralId = peripheralId,
+		.pinMask = pinMask,
+		.control = control,
+	};
 
-	pioConfigRx->pins = PIO_PIN_9;
-	pioConfigRx->pinsConfig.control = Pio_Control_PeripheralA;
-
-	pioConfigTx->pins = PIO_PIN_10;
-	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralA;
+	return pinConfig;
 }
 
-inline static void
-Samv71RtemsSerial_uart_init_uart1_pio(Pio_Port *const port,
-				      Pio_Port_Config *const pioConfigTx,
-				      Pio_Port_Config *const pioConfigRx)
+static inline Uart_Id
+Samv71RtemsSerial_get_uart_id(const Serial_SamV71_Rtems_Device_T *const device)
 {
-	*port = Pio_Port_A;
-
-	pioConfigRx->pins = PIO_PIN_5;
-	pioConfigRx->pinsConfig.control = Pio_Control_PeripheralC;
-
-	pioConfigTx->pins = PIO_PIN_6;
-	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
+	switch (device->kind) {
+	case uart0_PRESENT:
+		return Uart_Id_0;
+	case uart1_PRESENT:
+		return Uart_Id_1;
+	case uart2_PRESENT:
+		return Uart_Id_2;
+	case uart3_PRESENT:
+		return Uart_Id_3;
+	case uart4_PRESENT:
+		return Uart_Id_4;
+	default:
+		assert(false && "Unsupported UART");
+		return Uart_Id_0;
+	}
 }
 
-inline static void
-Samv71RtemsSerial_uart_init_uart2_pio(Pio_Port *const port,
-				      Pio_Port_Config *const pioConfigTx,
-				      Pio_Port_Config *const pioConfigRx)
+static Samv71RtemsSerial_UartPinConfig Samv71RtemsSerial_get_uart_tx_pin_config(
+	const Serial_SamV71_Rtems_Device_T *const device)
 {
-	*port = Pio_Port_D;
-
-	pioConfigRx->pins = PIO_PIN_25;
-	pioConfigRx->pinsConfig.control = Pio_Control_PeripheralC;
-
-	pioConfigTx->pins = PIO_PIN_26;
-	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
+	switch (device->kind) {
+	case uart0_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_10,
+			Pio_Control_PeripheralA);
+	case uart1_PRESENT:
+		switch (device->u.uart1.tx) {
+		case Serial_SamV71_Rtems_Device_T_uart1_tx_pa4:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_4,
+				Pio_Control_PeripheralC);
+		case Serial_SamV71_Rtems_Device_T_uart1_tx_pa6:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_6,
+				Pio_Control_PeripheralC);
+		case Serial_SamV71_Rtems_Device_T_uart1_tx_pd26:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_26,
+				Pio_Control_PeripheralD);
+		default:
+			assert(false && "Not supported UART1 TX pin");
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_4,
+				Pio_Control_PeripheralC);
+		}
+	case uart2_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_26,
+			Pio_Control_PeripheralC);
+	case uart3_PRESENT:
+		switch (device->u.uart3.tx) {
+		case Serial_SamV71_Rtems_Device_T_uart3_tx_pd30:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_30,
+				Pio_Control_PeripheralA);
+		case Serial_SamV71_Rtems_Device_T_uart3_tx_pd31:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_31,
+				Pio_Control_PeripheralA);
+		default:
+			assert(false && "Not supported UART3 TX pin");
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_30,
+				Pio_Control_PeripheralA);
+		}
+	case uart4_PRESENT:
+		switch (device->u.uart4.tx) {
+		case Serial_SamV71_Rtems_Device_T_uart4_tx_pd3:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_3,
+				Pio_Control_PeripheralC);
+		case Serial_SamV71_Rtems_Device_T_uart4_tx_pd19:
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_19,
+				Pio_Control_PeripheralC);
+		default:
+			assert(false && "Not supported UART4 TX pin");
+			return Samv71RtemsSerial_make_uart_pin_config(
+				Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_19,
+				Pio_Control_PeripheralC);
+		}
+	default:
+		assert(false && "Unsupported UART");
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_10,
+			Pio_Control_PeripheralA);
+	}
 }
 
-inline static void
-Samv71RtemsSerial_uart_init_uart3_pio(Pio_Port *const port,
-				      Pio_Port_Config *const pioConfigTx,
-				      Pio_Port_Config *const pioConfigRx)
+static Samv71RtemsSerial_UartPinConfig Samv71RtemsSerial_get_uart_rx_pin_config(
+	const Serial_SamV71_Rtems_Device_T *const device)
 {
-	*port = Pio_Port_D;
-
-	pioConfigRx->pins = PIO_PIN_28;
-	pioConfigRx->pinsConfig.control = Pio_Control_PeripheralA;
-
-	pioConfigTx->pins = PIO_PIN_30;
-	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralA;
+	switch (device->kind) {
+	case uart0_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_9,
+			Pio_Control_PeripheralA);
+	case uart1_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_5,
+			Pio_Control_PeripheralC);
+	case uart2_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_25,
+			Pio_Control_PeripheralC);
+	case uart3_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_28,
+			Pio_Control_PeripheralA);
+	case uart4_PRESENT:
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_D, Pmc_PeripheralId_PioD, PIO_PIN_18,
+			Pio_Control_PeripheralC);
+	default:
+		assert(false && "Unsupported UART");
+		return Samv71RtemsSerial_make_uart_pin_config(
+			Pio_Port_A, Pmc_PeripheralId_PioA, PIO_PIN_9,
+			Pio_Control_PeripheralA);
+	}
 }
 
-inline static void
-Samv71RtemsSerial_uart_init_uart4_pio(Pio_Port *const port,
-				      Pio_Port_Config *const pioConfigTx,
-				      Pio_Port_Config *const pioConfigRx)
+static inline void Samv71RtemsSerial_uart_init_pin(
+	const Samv71RtemsSerial_UartPinConfig *const pinConfig,
+	Pio_Direction direction)
 {
-	*port = Pio_Port_D;
+	Pio_Port_Config pioConfig = { .pinsConfig =
+				     {
+					     .pull = Pio_Pull_Up,
+					     .filter = Pio_Filter_None,
+					     .isMultiDriveEnabled = false,
+					     .isSchmittTriggerDisabled = false,
+					     .irq = Pio_Irq_None,
+					     .direction = direction,
+					     .control = pinConfig->control,
+				     },
+				     .debounceFilterDiv = 0,
+				     .pins = pinConfig->pinMask };
+	Pio pio;
+	ErrorCode errorCode = 0;
 
-	pioConfigRx->pins = PIO_PIN_18;
-	pioConfigRx->pinsConfig.control = Pio_Control_PeripheralC;
-
-	pioConfigTx->pins = PIO_PIN_19;
-	pioConfigTx->pinsConfig.control = Pio_Control_PeripheralC;
+	Pio_init(pinConfig->port, &pio, &errorCode);
+	Pio_setPortConfig(&pio, &pioConfig, &errorCode);
 }
 
 static inline Pmc_PeripheralId Samv71RtemsSerial_get_periph_uart_id(Uart_Id id)
@@ -292,76 +386,38 @@ static inline Pmc_PeripheralId Samv71RtemsSerial_get_periph_uart_id(Uart_Id id)
 		return Pmc_PeripheralId_Uart3;
 	case Uart_Id_4:
 		return Pmc_PeripheralId_Uart4;
+	default:
+		assert(false);
+		return Pmc_PeripheralId_Uart0;
 	}
 }
 
-static inline Pmc_PeripheralId
-Samv71RtemsSerial_get_periph_uart_pio_id(Uart_Id id)
+static inline void Samv71RtemsSerial_uart_init_pio(
+	const Serial_SamV71_Rtems_Device_T *const device)
 {
-	switch (id) {
-	case Uart_Id_0:
-	case Uart_Id_1:
-		return Pmc_PeripheralId_PioA;
-	case Uart_Id_2:
-	case Uart_Id_3:
-	case Uart_Id_4:
-		return Pmc_PeripheralId_PioD;
-	}
+	const Samv71RtemsSerial_UartPinConfig txPinConfig =
+		Samv71RtemsSerial_get_uart_tx_pin_config(device);
+	const Samv71RtemsSerial_UartPinConfig rxPinConfig =
+		Samv71RtemsSerial_get_uart_rx_pin_config(device);
+
+	Samv71RtemsSerial_uart_init_pin(&txPinConfig, Pio_Direction_Output);
+	Samv71RtemsSerial_uart_init_pin(&rxPinConfig, Pio_Direction_Input);
 }
 
-static inline void Samv71RtemsSerial_uart_init_pio(Uart_Id id)
+inline static void Samv71RtemsSerial_uart_init_pmc(
+	const Serial_SamV71_Rtems_Device_T *const device)
 {
-	Pio_Port port;
-	Pio_Port_Config pioConfigTx = {.pinsConfig =
-                                     {
-                                         .pull = Pio_Pull_Up,
-                                         .filter = Pio_Filter_None,
-                                         .isMultiDriveEnabled = false,
-                                         .isSchmittTriggerDisabled = false,
-                                         .irq = Pio_Irq_None,
-                                         .direction = Pio_Direction_Output,
-                                     },
-                                 .debounceFilterDiv = 0};
-	pioConfigTx.pinsConfig.direction = Pio_Direction_Output;
+	const Samv71RtemsSerial_UartPinConfig txPinConfig =
+		Samv71RtemsSerial_get_uart_tx_pin_config(device);
+	const Samv71RtemsSerial_UartPinConfig rxPinConfig =
+		Samv71RtemsSerial_get_uart_rx_pin_config(device);
 
-	Pio_Port_Config pioConfigRx = pioConfigTx;
-	pioConfigRx.pinsConfig.direction = Pio_Direction_Input;
-
-	switch (id) {
-	case Uart_Id_0:
-		Samv71RtemsSerial_uart_init_uart0_pio(&port, &pioConfigTx,
-						      &pioConfigRx);
-		break;
-	case Uart_Id_1:
-		Samv71RtemsSerial_uart_init_uart1_pio(&port, &pioConfigTx,
-						      &pioConfigRx);
-		break;
-	case Uart_Id_2:
-		Samv71RtemsSerial_uart_init_uart2_pio(&port, &pioConfigTx,
-						      &pioConfigRx);
-		break;
-	case Uart_Id_3:
-		Samv71RtemsSerial_uart_init_uart3_pio(&port, &pioConfigTx,
-						      &pioConfigRx);
-		break;
-	case Uart_Id_4:
-		Samv71RtemsSerial_uart_init_uart4_pio(&port, &pioConfigTx,
-						      &pioConfigRx);
-		break;
+	SamV71Core_EnablePeripheralClock(txPinConfig.peripheralId);
+	if (rxPinConfig.peripheralId != txPinConfig.peripheralId) {
+		SamV71Core_EnablePeripheralClock(rxPinConfig.peripheralId);
 	}
-	Pio pio;
-	ErrorCode errorCode = 0;
-	Pio_init(port, &pio, &errorCode);
-	Pio_setPortConfig(&pio, &pioConfigTx, &errorCode);
-	Pio_setPortConfig(&pio, &pioConfigRx, &errorCode);
-}
-
-inline static void Samv71RtemsSerial_uart_init_pmc(Uart_Id id)
-{
-	SamV71Core_EnablePeripheralClock(
-		Samv71RtemsSerial_get_periph_uart_pio_id(id));
-	SamV71Core_EnablePeripheralClock(
-		Samv71RtemsSerial_get_periph_uart_id(id));
+	SamV71Core_EnablePeripheralClock(Samv71RtemsSerial_get_periph_uart_id(
+		Samv71RtemsSerial_get_uart_id(device)));
 }
 
 inline static void Samv71RtemsSerial_uart_init_handle(Uart *uart, Uart_Id id)
@@ -392,7 +448,8 @@ inline static void Samv71RtemsSerial_uart_init_handle(Uart *uart, Uart_Id id)
  */
 static void SamV71RtemsSerialInit_uart_init_hardware(
 	Samv71RtemsSerial_Uart *const halUart,
-	Samv71RtemsSerial_Uart_Config halUartConfig)
+	Samv71RtemsSerial_Uart_Config halUartConfig,
+	const Serial_SamV71_Rtems_Device_T *const device)
 {
 	SamV71RtemsSerial_Init_global();
 
@@ -401,8 +458,8 @@ static void SamV71RtemsSerialInit_uart_init_hardware(
 	       (halUartConfig.parity == Uart_Parity_None));
 
 	// init uart
-	Samv71RtemsSerial_uart_init_pmc(halUartConfig.id);
-	Samv71RtemsSerial_uart_init_pio(halUartConfig.id);
+	Samv71RtemsSerial_uart_init_pmc(device);
+	Samv71RtemsSerial_uart_init_pio(device);
 	Samv71RtemsSerial_uart_init_handle(&halUart->uart, halUartConfig.id);
 
 	Uart_init(halUartConfig.id, &halUart->uart);
@@ -420,7 +477,7 @@ static void SamV71RtemsSerialInit_uart_init_hardware(
 }
 
 static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
-	Samv71RtemsSerial_Uart *const halUart, uint8_t *const buffer,
+	Samv71RtemsSerial_Uart *const halUart, const uint8_t *const buffer,
 	const uint16_t length, const Uart_TxHandler *const txHandler,
 	uint32_t channelNumber)
 {
@@ -489,10 +546,9 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
  * \param [in] length length of array of bytes
  * \param [in] txHandler pointer to the  handler called after successful array transmission
  */
-static void
-SamV71RtemsSerialInit_uart_write(Samv71RtemsSerial_Uart *const halUart,
-				 uint8_t *const buffer, const uint16_t length,
-				 const Uart_TxHandler *const txHandler)
+static void SamV71RtemsSerialInit_uart_write(
+	Samv71RtemsSerial_Uart *const halUart, const uint8_t *const buffer,
+	const uint16_t length, const Uart_TxHandler *const txHandler)
 {
 	uint32_t channelNumber = XDMAD_AllocateChannel(
 		&xdmad, XDMAD_TRANSFER_MEMORY,
@@ -538,25 +594,7 @@ static inline void
 SamV71RtemsSerialInit_uart_register(samv71_rtems_serial_private_data *self,
 				    Serial_SamV71_Rtems_Device_T deviceName)
 {
-	switch (deviceName) {
-	case uart0:
-		self->m_hal_uart_config.id = Uart_Id_0;
-		break;
-	case uart1:
-		self->m_hal_uart_config.id = Uart_Id_1;
-		break;
-	case uart2:
-		self->m_hal_uart_config.id = Uart_Id_2;
-		break;
-	case uart3:
-		self->m_hal_uart_config.id = Uart_Id_3;
-		break;
-	case uart4:
-		self->m_hal_uart_config.id = Uart_Id_4;
-		break;
-	default:
-		assert(false && "Not supported device name");
-	}
+	self->m_hal_uart_config.id = Samv71RtemsSerial_get_uart_id(&deviceName);
 }
 
 static inline void
@@ -611,12 +649,12 @@ static inline void SamV71RtemsSerialInit_uart_init(
 	samv71_rtems_serial_private_data *const self,
 	const Serial_SamV71_Rtems_Conf_T *const device_configuration)
 {
-	SamV71RtemsSerialInit_uart_register(self,
-					    device_configuration->devname);
+	self->m_device = device_configuration->devname;
+	SamV71RtemsSerialInit_uart_register(self, self->m_device);
 	SamV71RtemsSerialInit_uart_parity(self, device_configuration->parity);
 	SamV71RtemsSerialInit_uart_baudrate(self, device_configuration->speed);
-	SamV71RtemsSerialInit_uart_init_hardware(&self->m_hal_uart,
-						 self->m_hal_uart_config);
+	SamV71RtemsSerialInit_uart_init_hardware(
+		&self->m_hal_uart, self->m_hal_uart_config, &self->m_device);
 }
 
 static void UartRxCallback(void *private_data)

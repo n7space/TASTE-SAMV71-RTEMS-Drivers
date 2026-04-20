@@ -1,6 +1,27 @@
 SAMV71-RTEMS-SERIAL-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
-Serial-SamV71-Rtems-Device-T    ::= ENUMERATED { uart0, uart1, uart2, uart3, uart4 }
+Serial-SamV71-Rtems-Device-T    ::= CHOICE {
+   uart0 SEQUENCE {
+      tx ENUMERATED { pa10 },
+      rx ENUMERATED { pa9 }
+   },
+   uart1 SEQUENCE {
+      tx ENUMERATED { pa4, pa6, pd26 },
+      rx ENUMERATED { pa5 }
+   },
+   uart2 SEQUENCE {
+      tx ENUMERATED { pd26 },
+      rx ENUMERATED { pd25 }
+   },
+   uart3 SEQUENCE {
+      tx ENUMERATED { pd30, pd31 },
+      rx ENUMERATED { pd28 }
+   },
+   uart4 SEQUENCE {
+      tx ENUMERATED { pd3, pd19 },
+      rx ENUMERATED { pd18 }
+   }
+}
 
 Serial-SamV71-Rtems-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b115200, b230400}
 
