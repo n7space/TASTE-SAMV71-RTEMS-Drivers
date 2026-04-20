@@ -193,7 +193,7 @@ typedef struct {
 } Samv71RtemsSerial_UartPinConfig;
 
 /*
- * Available UART pins configurations:
+ * Available UART pins configurations for 144-pin package SAMV71:
  * UART0:
  *   - URXD0 - PA9 (PIO peripheral A)
  *   - UTXD0 - PA10 (PIO peripheral A)
