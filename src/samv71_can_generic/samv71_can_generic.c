@@ -319,6 +319,14 @@ static void getCanIdAndTypeFromMessageData(const uint8_t *const data,
 	}
 }
 
+static bool shouldUseEscaper(samv71_can_generic_private_data const *const self)
+{
+	// escaper should be initialized only when max message size is greater than
+	// max CAN frame length, and can-id has static configuration
+	return (self->m_config->address.kind == static_can_id_PRESENT) &&
+	       (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE);
+}
+
 void SamV71RtemsCanInit(
 	void *private_data, const enum SystemBus bus_id,
 	const enum SystemDevice device_id,
@@ -352,10 +360,7 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
-	if ((bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) &&
-	    (self->m_config->address.kind == static_can_id_PRESENT)) {
-		// escaper can be initialized only when max message size is greater than max CAN frame length
-		// and can-id has static configuration
+	if (shouldUseEscaper(self)) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
 			     MCAN_MAX_DATA_SIZE, self->m_value_buffer,
 			     bus_message_size[self->m_bus_id]);
@@ -411,7 +416,7 @@ void SamV71RtemsCanPoll(void *private_data)
 		(samv71_can_generic_private_data *)private_data;
 	ErrorCode errCode = ErrorCode_NoError;
 
-	if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
+	if (shouldUseEscaper(self)) {
 		Escaper_start_decoder(&self->m_escaper);
 	}
 
@@ -448,8 +453,7 @@ void SamV71RtemsCanPoll(void *private_data)
 			assert(fifoPullResult);
 			assert(errCode == ErrorCode_NoError);
 
-			if (bus_message_size[self->m_bus_id] >
-			    MCAN_MAX_DATA_SIZE) {
+			if (shouldUseEscaper(self)) {
 				// if Escaper is enabled, then it will call Broker_receive_packet
 				Escaper_decode_packet(&self->m_escaper,
 						      self->m_bus_id,
@@ -536,7 +540,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 			       "Unknown static can address value in configuration");
 		}
 
-		if (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE) {
+		if (shouldUseEscaper(self)) {
 			size_t index = 0;
 			Escaper_start_encoder(&self->m_escaper);
 			size_t packet_length = Escaper_encode_packet(
