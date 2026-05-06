@@ -252,7 +252,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
                     .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
                     .watermark = 0,
     },
-    .interrupts = {},
+    .interrupts = {{.isEnabled = FALSE, .line = 0}},
     .isLine0InterruptEnabled = TRUE,
     .isLine1InterruptEnabled = FALSE,
     .wdtCounter = 0u,
@@ -324,7 +324,7 @@ static bool shouldUseEscaper(samv71_can_generic_private_data const *const self)
 	// escaper should be initialized only when max message size is greater than
 	// max CAN frame length, and can-id has static configuration
 	return (self->m_config->address.kind == static_can_id_PRESENT) &&
-	       (bus_message_size[self->m_bus_id] > MCAN_MAX_DATA_SIZE);
+	       (bus_message_size[self->m_bus_id] > (int)MCAN_MAX_DATA_SIZE);
 }
 
 void SamV71RtemsCanInit(
@@ -410,7 +410,7 @@ void SamV71RtemsCanInit(
 	assert(taskStartStatus == RTEMS_SUCCESSFUL);
 }
 
-void SamV71RtemsCanPoll(void *private_data)
+void SamV71RtemsCanPoll(rtems_task_argument private_data)
 {
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;

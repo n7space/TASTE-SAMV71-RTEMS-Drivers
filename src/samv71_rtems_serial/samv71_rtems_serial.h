@@ -124,7 +124,7 @@ void Samv71RtemsSerialInit(
  *
  * @param private_data   Driver private data, allocated by runtime
  */
-void Samv71RtemsSerialPoll(void *private_data);
+void Samv71RtemsSerialPoll(rtems_task_argument private_data);
 
 /**
  * @brief Send data to remote partition.
