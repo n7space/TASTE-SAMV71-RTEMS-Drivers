@@ -176,8 +176,7 @@ void Samv71RtemsSerial_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 static inline void
 Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
-	Samv71RtemsSerial_Uart *halUart = (Samv71RtemsSerial_Uart *)arg;
-
+    (void)arg;
 	if (Samv71RtemsSerial_user_uart_error_callback != NULL) {
 		Samv71RtemsSerial_user_uart_error_callback(
 			errorFlags,
@@ -779,7 +778,7 @@ static inline void SamV71RtemsSerialInterrupt_rx_disable(
 		UART_IDR_RXRDY_MASK | UART_IDR_FRAME_MASK | UART_IDR_OVRE_MASK;
 }
 
-void Samv71RtemsSerialPoll(void *private_data)
+void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 {
 	samv71_rtems_serial_private_data *self =
 		(samv71_rtems_serial_private_data *)private_data;

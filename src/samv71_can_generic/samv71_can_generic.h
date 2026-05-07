@@ -113,7 +113,7 @@ void SamV71RtemsCanInit(
  *
  * @param private_data   Driver private data, allocated by runtime
  */
-void SamV71RtemsCanPoll(void *private_data);
+void SamV71RtemsCanPoll(rtems_task_argument private_data);
 
 /**
  * @brief Send data to remote partition.
