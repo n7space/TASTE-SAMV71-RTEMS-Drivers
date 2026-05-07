@@ -324,7 +324,7 @@ static bool shouldUseEscaper(samv71_can_generic_private_data const *const self)
 	// escaper should be initialized only when max message size is greater than
 	// max CAN frame length, and can-id has static configuration
 	return (self->m_config->address.kind == static_can_id_PRESENT) &&
-	       (bus_message_size[self->m_bus_id] > (int)MCAN_MAX_DATA_SIZE);
+	       (bus_message_size[self->m_bus_id] > (int32_t)MCAN_MAX_DATA_SIZE);
 }
 
 void SamV71RtemsCanInit(
