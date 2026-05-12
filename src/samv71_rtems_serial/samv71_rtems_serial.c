@@ -176,7 +176,7 @@ void Samv71RtemsSerial_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 static inline void
 Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
 {
-    (void)arg;
+	(void)arg;
 	if (Samv71RtemsSerial_user_uart_error_callback != NULL) {
 		Samv71RtemsSerial_user_uart_error_callback(
 			errorFlags,

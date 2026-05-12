@@ -14,7 +14,7 @@ target_sources(SamV71RuntimeMocks
             system_spec.h)
 
 target_include_directories(SamV71RuntimeMocks
-  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMV71-RTEMS-Runtime/src
+  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
             ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(SamV71RuntimeMocks

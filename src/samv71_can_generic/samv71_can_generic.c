@@ -333,6 +333,8 @@ void SamV71RtemsCanInit(
 	const CAN_Samv71_Rtems_Conf_T *const device_configuration,
 	const CAN_Samv71_Rtems_Conf_T *const remote_device_configuration)
 {
+	(void)device_id;
+	(void)remote_device_configuration;
 	samv71_can_generic_private_data *self =
 		(samv71_can_generic_private_data *)private_data;
 
@@ -363,7 +365,8 @@ void SamV71RtemsCanInit(
 	if (shouldUseEscaper(self)) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
 			     MCAN_MAX_DATA_SIZE, self->m_value_buffer,
-			     bus_message_size[self->m_bus_id]);
+			     (size_t)bus_message_size[self->m_bus_id]);
+        // self->m_value_buffer, is m_decoded_packet_buffer,
 	}
 
 	if (self->m_config->address.kind ==

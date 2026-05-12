@@ -59,8 +59,7 @@ rtems_task Init(rtems_task_argument argument)
 {
 	Hal_Init();
 	Samv71RtemsSerialInit(&driver_private_data, BUS_BUS_1,
-			      DEVICE_NODE_2_UART0, &pohidrv_node_2_uart0,
-			      NULL);
+			      DEVICE_NODE_2_UART0, &pohidrv_node_2_uart0, NULL);
 
 	Samv71RtemsSerialSend(&driver_private_data, test_buffer,
 			      test_buffer_size);
