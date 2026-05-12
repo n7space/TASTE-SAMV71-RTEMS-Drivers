@@ -55,6 +55,7 @@ endif()
 
 target_compile_options(common_build_options INTERFACE ${PROJECT_WARNINGS})
 
+
 add_library(bsp_build_options INTERFACE)
 target_compile_definitions(bsp_build_options
     INTERFACE   USE_UART_IO
@@ -82,6 +83,8 @@ add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Sdramc)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Scb)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Rstc)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Pio)
+add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Mpu)
+add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Systick)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Pmc)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Tic)
 add_subdirectory(TASTE-SAMX-RTEMS-Runtime/arm-bsp/src/Uart)

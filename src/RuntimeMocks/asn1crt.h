@@ -192,6 +192,7 @@ typedef struct {
 #define ERR_INVALID_XML_FILE 200
 #define ERR_INVALID_BER_FILE 201
 #define ERR_BER_LENGTH_MISMATCH 202
+#define ERR_ACN_DET_CONSISTENCY_MISMATCH 203
 
 /**
  * Performs a binary search on a sorted array to find the index of a given value.

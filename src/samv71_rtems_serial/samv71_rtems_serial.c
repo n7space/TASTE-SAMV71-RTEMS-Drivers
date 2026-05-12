@@ -19,7 +19,7 @@
 
 #include "samv71_rtems_serial.h"
 
-#include "Broker.h"
+#include <Broker.h>
 #include <rtems.h>
 #include <assert.h>
 

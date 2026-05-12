@@ -364,9 +364,8 @@ void SamV71RtemsCanInit(
 
 	if (shouldUseEscaper(self)) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
-			     MCAN_MAX_DATA_SIZE, self->m_value_buffer,
+			     MCAN_MAX_DATA_SIZE, self->m_value_buffer.m_data,
 			     (size_t)bus_message_size[self->m_bus_id]);
-        // self->m_value_buffer, is m_decoded_packet_buffer,
 	}
 
 	if (self->m_config->address.kind ==
@@ -469,16 +468,21 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 				    application_control_can_id_PRESENT) {
 					// if application controls can-id, then write can-id into first 4 bytes od m_rx_buffer
 					uint32_t *address_pointer =
-						(uint32_t *)self->m_rx_buffer;
+						(uint32_t *)self->m_value_buffer
+							.m_address_byte;
 					*address_pointer = rxElement.id;
 					// id extended standard
 					if (rxElement.idType ==
 					    Mcan_IdType_Extended) {
 						*address_pointer |= 0x20000000u;
 					}
+					memcpy(self->m_value_buffer.m_data +
+						       sizeof(uint32_t),
+					       self->m_rx_buffer,
+					       rxElement.dataSize);
 					Broker_receive_packet(
 						self->m_bus_id,
-						self->m_rx_buffer,
+						self->m_value_buffer.m_data,
 						rxElement.dataSize +
 							sizeof(uint32_t));
 				} else {

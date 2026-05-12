@@ -3,9 +3,10 @@
 
 enum RemoteInterface {
 	INTERFACE_INVALID_ID,
-	INTERFACE_PINGER_PONG,
-	INTERFACE_PINGER_ALIVE,
 	INTERFACE_PONGER_PING,
+	INTERFACE_CUBESAT_TC,
+	INTERFACE_PINGER_PONG,
+	INTERFACE_GROUND_TM,
 	INTERFACE_MAX_ID,
 };
 
@@ -18,6 +19,7 @@ enum SystemPartition {
 enum SystemBus {
 	BUS_INVALID_ID,
 	BUS_BUS_1,
+	BUS_BUS_2,
 };
 
 enum PacketizerCfg {
@@ -30,7 +32,7 @@ enum PacketizerCfg {
 	PACKETIZER_MAX_ID,
 };
 
-#define SYSTEM_BUSES_NUMBER (1 + 1)
+#define SYSTEM_BUSES_NUMBER (2 + 1)
 
 struct PartitionBusPair {
 	enum SystemPartition partition;
@@ -42,15 +44,25 @@ extern enum RemoteInterface bus_to_port_map[];
 extern struct PartitionBusPair port_to_partition_bus_map[];
 
 enum SystemDevice {
-	DEVICE_NODE_1_UART0,
-	DEVICE_NODE_2_UART0,
+	DEVICE_NODE_1_UART4,
+	DEVICE_NODE_1_CAN0,
+	DEVICE_NODE_2_UART4,
+	DEVICE_NODE_2_CAN0,
 	DEVICE_INVALID_ID,
 };
 
-#define SYSTEM_DEVICE_NUMBER (2 + 1)
+#define SYSTEM_DEVICE_NUMBER (4 + 1)
 
 extern enum SystemBus device_to_bus_map[SYSTEM_DEVICE_NUMBER];
 extern const void *const device_configurations[SYSTEM_DEVICE_NUMBER];
 extern const unsigned packetizer_configurations[SYSTEM_DEVICE_NUMBER];
+extern int bus_message_size[SYSTEM_BUSES_NUMBER];
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void initialize_system_spec();
+#ifdef __cplusplus
+}
+#endif
 #endif
