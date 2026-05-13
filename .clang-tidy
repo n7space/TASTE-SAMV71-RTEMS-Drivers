@@ -81,7 +81,7 @@ Checks: '-*,
 		modernize-use-transparent-functors,
 		performance-noexcept-destructor,
 		performance-noexcept-move-constructor,
-		performance-noexcept-swap
+		performance-noexcept-swap,
 		readability-braces-around-statements,
 		readability-else-after-return,
 		readability-inconsistent-declaration-parameter-name,
