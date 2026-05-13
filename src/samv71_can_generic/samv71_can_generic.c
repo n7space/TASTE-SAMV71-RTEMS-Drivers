@@ -468,7 +468,7 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 				    application_control_can_id_PRESENT) {
 					// if application controls can-id, then write can-id into first 4 bytes od m_rx_buffer
 					uint32_t *address_pointer =
-						(uint32_t *)self->m_value_buffer
+						(uint32_t *)&self->m_value_buffer
 							.m_address_byte;
 					*address_pointer = rxElement.id;
 					// id extended standard
