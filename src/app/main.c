@@ -58,8 +58,9 @@ const size_t test_buffer_size = sizeof(test_buffer);
 rtems_task Init(rtems_task_argument argument)
 {
 	(void)argument;
+	initialize_system_spec();
 	Hal_Init();
-	Samv71RtemsSerialInit(&driver_private_data, BUS_BUS_1,
+	Samv71RtemsSerialInit(&driver_private_data, BUS_BUS_2,
 			      DEVICE_NODE_1_UART4, &pohidrv_node_1_uart4, NULL);
 
 	Samv71RtemsSerialSend(&driver_private_data, test_buffer,
