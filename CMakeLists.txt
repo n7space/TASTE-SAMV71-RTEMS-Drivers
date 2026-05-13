@@ -10,12 +10,31 @@ set(TESTS_OUTPUT_PATH ${CMAKE_BINARY_DIR}/build/tests)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+option(WITH_CLANGT_TIDY "Enable clang-tidy static code analyzer" OFF)
+
 include(MessageColors)
 include(LoggingHelper)
 
 add_library(common_build_options INTERFACE)
 include(CommonBuildOptions)
 include(Sanitizers)
+
+if(WITH_CLANGT_TIDY)
+    message("Checking for clang-tidy")
+    find_program(CLANG_TIDY_EXE clang-tidy
+        NAMES clang-tidy
+        clang-tidy-19
+        clang-tidy-20
+        clang-tidy-21
+        clang-tidy-22
+        clang-tidy-23
+        REQUIRED)
+    if(CLANG_TIDY_EXE MATCHES "-NOTFOUND")
+        message(FATAL_ERROR "Clang-tidy not found")
+    else()
+        message("Clang-tidy executable: ${CLANG_TIDY_EXE}")
+    endif()
+endif()
 
 option(TASTE_SAMV71_DRIVERS_WARNINGS_AS_ERRORS
        "Treat compiler warnings as errors"
@@ -40,10 +59,14 @@ set(CLANG_WARNINGS ${CLANG_WARNINGS}
 
 set(GCC_WARNINGS ${CLANG_WARNINGS}
                  -Wimplicit-function-declaration
-                 -Wmisleading-indentation
-                 -Wduplicated-cond
-                 -Wduplicated-branches
-                 -Wlogical-op)
+                 -Wmisleading-indentation)
+
+if(NOT WITH_CLANGT_TIDY)
+    set(GCC_WARNINGS ${GCC_WARNINGS}
+        -Wduplicated-branches
+        -Wduplicated-cond
+        -Wlogical-op)
+endif()
 
 log_info(${CMAKE_C_COMPILER_ID})
 
@@ -62,9 +85,13 @@ target_compile_definitions(bsp_build_options
                 LOW_LEVEL_IO_UART_ID=4)
 
 include(CppCheck)
-include(ClangTidy)
 include(ClangFormat)
 include(Doxygen)
+
+if(WITH_CLANGT_TIDY)
+    set(CMAKE_CXX_CLANG_TIDY clang-tidy; --use-color; --config-file=${CMAKE_CURRENT_LIST_DIR}/.clang-tidy; --header-filter=.;)
+    set(CMAKE_C_CLANG_TIDY clang-tidy; --use-color; --config-file=${CMAKE_CURRENT_LIST_DIR}/.clang-tidy; --header-filter=.;)
+endif()
 
 include_directories(SYSTEM
   /opt/rtems/arm-rtems6/atsamv/lib/include
