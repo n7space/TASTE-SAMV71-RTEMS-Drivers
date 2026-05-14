@@ -5,7 +5,7 @@ target_sources(SamV71RtemsCan
 
  target_include_directories(SamV71RtemsCan
   PUBLIC    ${CMAKE_SOURCE_DIR}/src/RuntimeMocks
-            ${CMAKE_SOURCE_DIR}/TASTE-SAMV71-RTEMS-Runtime/src
+            ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
             ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(SamV71RtemsCan

@@ -4,16 +4,20 @@
 #include <limits.h>
 #include <rtems.h>
 
-#define RUNTIME_THREAD_COUNT (1 + 2)
-#define RUNTIME_CYCLIC_INTERFACE_COUNT (0 + 1 + 1)
+#define RUNTIME_THREAD_COUNT (1 + 4)
+#define RUNTIME_CYCLIC_INTERFACE_COUNT (0 + 1 + 1 + 1 + 1)
 #define MAX_THREAD_NAME_SIZE 64
 #define NANOSECONDS_IN_MILLISECOND 1000000ULL
 
 enum interfaces_enum {
 
-	ponger_ping,
+	ground_tm,
 
-	ponger_trigger,
+	ground_trigger,
+
+	pinger_activate,
+
+	pinger_pong,
 
 };
 

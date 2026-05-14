@@ -85,7 +85,10 @@ typedef struct __attribute__((aligned(4096))) {
 	Escaper m_escaper;
 	uint8_t m_tx_buffer[8];
 	uint8_t m_rx_buffer[8];
-	uint8_t m_value_buffer[BROKER_BUFFER_SIZE];
+	union {
+		uint8_t m_data[BROKER_BUFFER_SIZE];
+		uint32_t m_address_byte;
+	} m_value_buffer;
 } samv71_can_generic_private_data;
 
 /**
