@@ -1,7 +1,7 @@
 /**@file
  * This file is part of the TASTE SAMV71 RTEMS Drivers.
  *
- * @copyright 2025 N7 Space Sp. z o.o.
+ * @copyright 2025-2026 N7 Space Sp. z o.o.
  *
  * Licensed under the ESA Public License (ESA-PL) Permissive (Type 3),
  * Version 2.4 (the "License");
@@ -18,6 +18,8 @@
  */
 
 #include "samv71_rtems_serial.h"
+
+#include <stdlib.h>
 
 #include <Broker.h>
 #include <rtems.h>
@@ -80,31 +82,31 @@ static Uart *uart4handle;
 void UART0_Handler(void)
 {
 	if (uart0handle != NULL)
-		Uart_handleInterrupt(uart0handle);
+		Uart_handleInterrupt(uart0handle, NULL);
 }
 
 void UART1_Handler(void)
 {
 	if (uart1handle != NULL)
-		Uart_handleInterrupt(uart1handle);
+		Uart_handleInterrupt(uart1handle, NULL);
 }
 
 void UART2_Handler(void)
 {
 	if (uart2handle != NULL)
-		Uart_handleInterrupt(uart2handle);
+		Uart_handleInterrupt(uart2handle, NULL);
 }
 
 void UART3_Handler(void)
 {
 	if (uart3handle != NULL)
-		Uart_handleInterrupt(uart3handle);
+		Uart_handleInterrupt(uart3handle, NULL);
 }
 
 void UART4_Handler(void)
 {
 	if (uart4handle != NULL)
-		Uart_handleInterrupt(uart4handle);
+		Uart_handleInterrupt(uart4handle, NULL);
 }
 
 inline static void Init_setup_xdmad_lock()
@@ -174,12 +176,13 @@ void Samv71RtemsSerial_uart_xdmad_handler(uint32_t xdmacChannel, void *args)
 }
 
 static inline void
-Samv71RtemsSerial_uart_error_handler(Uart_ErrorFlags errorFlags, void *arg)
+Samv71RtemsSerial_uart_error_handler(const Uart_ErrorFlags *errorFlags,
+				     void *arg)
 {
 	(void)arg;
 	if (Samv71RtemsSerial_user_uart_error_callback != NULL) {
 		Samv71RtemsSerial_user_uart_error_callback(
-			errorFlags,
+			*errorFlags,
 			Samv71RtemsSerial_user_uart_error_callback_arg);
 	}
 }
@@ -437,6 +440,12 @@ inline static void Samv71RtemsSerial_uart_init_handle(Uart *uart, Uart_Id id)
 	case Uart_Id_4:
 		uart4handle = uart;
 		break;
+	default:
+		// added to handle all the enumerations and suppress the warning
+		// if any unallowed value appear here, then it is a logic error
+		// so abort is reasonable
+		abort();
+		break;
 	}
 }
 
@@ -462,7 +471,7 @@ static void SamV71RtemsSerialInit_uart_init_hardware(
 	Samv71RtemsSerial_uart_init_handle(&halUart->uart, halUartConfig.id);
 
 	Uart_init(halUartConfig.id, &halUart->uart);
-	Uart_startup(&halUart->uart);
+	Uart_reset(&halUart->uart);
 
 	Uart_Config config = { .isTxEnabled = true,
 			       .isRxEnabled = true,
@@ -498,7 +507,7 @@ static void Samv71RtemsSerial_Hal_uart_write_init_xdmac_channel(
 		// length. Thus one uBlock can be used.
 		.mbr_sa = (uint32_t)buffer, //< Data buffer as source addres
 		.mbr_da =
-			(uint32_t)&halUart->uart.reg
+			(uint32_t)&halUart->uart.registers
 				->thr, //< Uart tx holding register as a destination address
 		.mbr_cfg =
 			XDMAC_CC_TYPE_PER_TRAN | XDMAC_CC_MBSIZE_SINGLE |
@@ -767,14 +776,14 @@ void Samv71RtemsSerialInit(
 static inline void SamV71RtemsSerialInterrupt_rx_enable(
 	samv71_rtems_serial_private_data *const self)
 {
-	self->m_hal_uart.uart.reg->ier =
+	self->m_hal_uart.uart.registers->ier =
 		UART_IER_RXRDY_MASK | UART_IER_FRAME_MASK | UART_IER_OVRE_MASK;
 }
 
 static inline void SamV71RtemsSerialInterrupt_rx_disable(
 	samv71_rtems_serial_private_data *const self)
 {
-	self->m_hal_uart.uart.reg->idr =
+	self->m_hal_uart.uart.registers->idr =
 		UART_IDR_RXRDY_MASK | UART_IDR_FRAME_MASK | UART_IDR_OVRE_MASK;
 }
 
