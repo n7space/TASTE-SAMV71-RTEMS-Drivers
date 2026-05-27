@@ -472,7 +472,6 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 				// without Escaper Broker_receive_packet needs to be called directly
 				if (self->m_config->address.kind ==
 				    application_control_can_id_PRESENT) {
-					// if application controls can-id, then write can-id into first 4 bytes od m_rx_buffer
 					uint32_t canId = rxElement.id;
 					if (rxElement.idType ==
 					    Mcan_IdType_Extended) {
