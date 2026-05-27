@@ -412,12 +412,21 @@ void SamV71RtemsCanInit(
 	}
 
 	if (ifaceUsesDynamicId(self)) {
+		// Sanity check:
 		// Using dynamic (application-controller) CAN ID is not supported when max message size is
-		// greater than MCAN_MAX_DATA_SIZE + sizeof(uint32_t), because it would require splitting the
+		// greater than MCAN_MAX_DATA_SIZE + sizeof(uint32_t) + sizeof(uint8_t), because it would require splitting the
 		// payload - and therefore escaping the data.
-		assert(((size_t)maxMessageSize(self) <=
-			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t))) &&
-		       "incorrect configuration, application-control-can-id cannot be used when payload length is greater than maximum frame size + ID length");
+		// `uint32_t` is used to store the CAN frame ID, while `uint8_t` is used to determine the data length.
+		// This is an example ACN encoding of full CAN frame in this configuration:
+		// Can-Frame [] {
+		//   id [],
+		//   data-size INTEGER [size 8, encoding pos-int],
+		//   data [size data-size]
+		// }
+		assert((maxMessageSize(self) <=
+			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t) +
+			 sizeof(uint8_t))) &&
+		       "incorrect configuration, application-control-can-id cannot be used when payload length is greater than maximum frame size + ID + length");
 	}
 
 	const rtems_status_code status_code_create_rx_sem =
