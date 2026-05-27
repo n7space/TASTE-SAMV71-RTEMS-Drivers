@@ -354,6 +354,7 @@ void SamV71RtemsCanInit(
 	} else {
 		assert(0 &&
 		       "unknown mcan value of can-interface in configuration");
+		return;
 	}
 
 	Mcan_Config conf = prepareMcanConfig(self);
@@ -548,6 +549,7 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 		} else {
 			assert(0 &&
 			       "Unknown static can address value in configuration");
+			return;
 		}
 
 		if (shouldUseEscaper(self)) {
@@ -577,5 +579,6 @@ void SamV71RtemsCanSend(void *private_data, const uint8_t *const data,
 					length - sizeof(uint32_t));
 	} else {
 		assert(0 && "Unknown address kind in configuration");
+		return;
 	}
 }
