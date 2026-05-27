@@ -72,7 +72,10 @@ waitForTransmissionFinished(const samv71_can_generic_private_data *const self,
 {
 	const rtems_status_code obtainResult = rtems_semaphore_obtain(
 		self->m_tx_semaphore, RTEMS_WAIT, SAMV71_CAN_SEND_TIMEOUT);
-	assert(obtainResult == RTEMS_SUCCESSFUL);
+	if (obtainResult != RTEMS_SUCCESSFUL) {
+		assert(0 && "Could not obtain TX semaphore!");
+		return false;
+	}
 
 	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
 }
