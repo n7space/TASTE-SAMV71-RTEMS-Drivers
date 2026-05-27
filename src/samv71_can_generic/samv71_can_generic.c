@@ -386,7 +386,7 @@ void SamV71RtemsCanInit(
 
 	if (self->m_config->address.kind ==
 	    application_control_can_id_PRESENT) {
-		assert((BROKER_BUFFER_SIZE >
+		assert((BROKER_BUFFER_SIZE >=
 			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t))) &&
 		       "incorrect configuration, application-control-can-id cannot be used due to broker buffer being too small to accommodate full CAN frame with extended CAN ID.");
 	}
