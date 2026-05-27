@@ -87,7 +87,7 @@ typedef struct __attribute__((aligned(4096))) {
 	uint8_t m_rx_buffer[8];
 	union {
 		uint8_t m_data[BROKER_BUFFER_SIZE];
-		uint32_t m_address_byte;
+		uint32_t m_address;
 	} m_value_buffer;
 } samv71_can_generic_private_data;
 

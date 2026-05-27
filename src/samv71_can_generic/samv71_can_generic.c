@@ -477,9 +477,7 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 					    Mcan_IdType_Extended) {
 						canId |= 0x20000000u;
 					}
-
-					self->m_value_buffer.m_address_byte =
-						canId;
+					self->m_value_buffer.m_address = canId;
 
 					memcpy(self->m_value_buffer.m_data +
 						       sizeof(uint32_t),
