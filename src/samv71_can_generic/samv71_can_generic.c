@@ -41,7 +41,7 @@
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
 
-static bool isMcanPckConfigured = FALSE;
+static bool isMcanPckConfigured = false;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
 
 static void mcan_int0_Handler(void *private_data)
@@ -80,10 +80,10 @@ static void configurePioCan0(Pio *pio)
 		.direction = Pio_Direction_Output,
 		.pull = Pio_Pull_Up,
 		.filter = Pio_Filter_None,
-		.isMultiDriveEnabled = FALSE,
+		.isMultiDriveEnabled = false,
 		.irq = Pio_Irq_None,
 		.driveStrength = Pio_Drive_Low,
-		.isSchmittTriggerDisabled = FALSE,
+		.isSchmittTriggerDisabled = false,
 	};
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 	ErrorCode errorCode = 0;
@@ -103,10 +103,10 @@ static void configurePioCan1(Pio *pio)
 		.direction = Pio_Direction_Output,
 		.pull = Pio_Pull_Up,
 		.filter = Pio_Filter_None,
-		.isMultiDriveEnabled = FALSE,
+		.isMultiDriveEnabled = false,
 		.irq = Pio_Irq_None,
 		.driveStrength = Pio_Drive_Low,
-		.isSchmittTriggerDisabled = FALSE,
+		.isSchmittTriggerDisabled = false,
 	};
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
 	ErrorCode errorCode = 0;
@@ -142,7 +142,7 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 		       "Cannot configure PCK5, the driver has different configuration than other.");
 	} else {
 		firstConfig = config;
-		isMcanPckConfigured = TRUE;
+		isMcanPckConfigured = true;
 	}
 
 	const Pmc_PckConfig pckConfig = {
@@ -182,7 +182,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	static const Mcan_Config defaultConfig = {
     .msgRamBaseAddress = NULL,
     .mode = Mcan_Mode_Normal,
-    .isFdEnabled = FALSE,
+    .isFdEnabled = false,
     .nominalBitTiming = {
       .bitRatePrescaler = 0u,
       .synchronizationJump = 2u,
@@ -196,31 +196,31 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
       .timeSegmentBeforeSamplePoint = 15u,
     },
     .transmitterDelayCompensation = {
-      .isEnabled = FALSE,
+      .isEnabled = false,
       .filter = 0u,
       .offset = 0u,
     },
     .timestampClk = Mcan_TimestampClk_Internal,
     .timestampTimeoutPrescaler = 14u,
     .timeout = {
-      .isEnabled = FALSE,
+      .isEnabled = false,
       .type = Mcan_TimeoutType_Continuous,
       .period = 0u,
     },
     .standardIdFilter = {
-      .isIdRejected = FALSE,
+      .isIdRejected = false,
       .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
       .filterListAddress = NULL,
       .filterListSize = 0u,
     },
     .extendedIdFilter = {
-      .isIdRejected = FALSE,
+      .isIdRejected = false,
       .nonMatchingPolicy = Mcan_NonMatchingPolicy_RxFifo0,
       .filterListAddress = NULL,
       .filterListSize = 0u,
     },
     .rxFifo0 = {
-      .isEnabled = TRUE,
+      .isEnabled = true,
       .startAddress = NULL,
       .size = MSGRAM_RXFIFO0_SIZE / sizeof(uint32_t),
       .watermark = 0u,
@@ -228,7 +228,7 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
       .elementSize = Mcan_ElementSize_8,
     },
     .rxFifo1 = {
-      .isEnabled = FALSE,
+      .isEnabled = false,
       .startAddress = NULL,
       .size = MSGRAM_RXFIFO1_SIZE / sizeof(uint32_t),
       .watermark = 0u,
@@ -240,21 +240,21 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
       .elementSize = Mcan_ElementSize_8,
     },
     .txBuffer = {
-      .isEnabled = TRUE,
+      .isEnabled = true,
       .startAddress = NULL,
       .bufferSize = MSGRAM_TXBUFFER_SIZE / sizeof(uint32_t),
       .queueSize = 0u,
       .queueType = Mcan_TxQueueType_Fifo,
       .elementSize = Mcan_ElementSize_8,
     },
-    .txEventFifo = {.isEnabled = TRUE,
+    .txEventFifo = {.isEnabled = true,
                     .startAddress = NULL,
                     .size = MSGRAM_TXEVENTINFO_SIZE / sizeof(uint32_t),
                     .watermark = 0,
     },
-    .interrupts = {{.isEnabled = FALSE, .line = 0}},
-    .isLine0InterruptEnabled = TRUE,
-    .isLine1InterruptEnabled = FALSE,
+    .interrupts = {{.isEnabled = false, .line = 0}},
+    .isLine0InterruptEnabled = true,
+    .isLine1InterruptEnabled = false,
     .wdtCounter = 0u,
   };
 
@@ -288,9 +288,9 @@ static Mcan_Config prepareMcanConfig(samv71_can_generic_private_data *self)
 	conf.dataBitTiming.timeSegmentBeforeSamplePoint =
 		self->m_config->time_segments_before_sample_point;
 
-	conf.interrupts[Mcan_Interrupt_Rf0n].isEnabled = TRUE;
+	conf.interrupts[Mcan_Interrupt_Rf0n].isEnabled = true;
 	conf.interrupts[Mcan_Interrupt_Rf0n].line = Mcan_InterruptLine_0;
-	conf.interrupts[Mcan_Interrupt_Tc].isEnabled = TRUE;
+	conf.interrupts[Mcan_Interrupt_Tc].isEnabled = true;
 	conf.interrupts[Mcan_Interrupt_Tc].line = Mcan_InterruptLine_0;
 
 	return conf;
@@ -507,12 +507,12 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *self,
 	txElement.id = id;
 	txElement.frameType = Mcan_FrameType_Data;
 	txElement.marker = 1;
-	txElement.isTxEventStored = FALSE;
-	txElement.isCanFdFormatEnabled = FALSE;
-	txElement.isBitRateSwitchingEnabled = FALSE;
+	txElement.isTxEventStored = false;
+	txElement.isCanFdFormatEnabled = false;
+	txElement.isBitRateSwitchingEnabled = false;
 	txElement.dataSize = length;
 	txElement.data = data;
-	txElement.isInterruptEnabled = TRUE;
+	txElement.isInterruptEnabled = true;
 	uint8_t pushIndex = 0;
 	ErrorCode errCode = ErrorCode_NoError;
 	bool pushResult =
