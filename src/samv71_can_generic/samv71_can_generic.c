@@ -40,7 +40,7 @@
 #define SAMV71_CAN_SEND_TIMEOUT 4 /* in systicks */
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
-#define CAN_EXTENDED_ID_BIT 0x20000000u;
+#define CAN_EXTENDED_ID_BIT 0x20000000u
 
 static bool isMcanPckConfigured = false;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
@@ -402,7 +402,7 @@ void SamV71RtemsCanInit(
 
 	const size_t decodingBufferSize = sizeof(self->m_value_buffer.m_data);
 	// Defensive programming - make sure that `m_data` buffer is large enough to store decoded message.
-	assert((decodingBufferSize >= maxMessageSize(self)) &&
+	assert((decodingBufferSize >= (size_t)maxMessageSize(self)) &&
 	       "Decoding buffer is not large enough to store whole message!");
 
 	if (shouldUseEscaper(self)) {
@@ -415,7 +415,7 @@ void SamV71RtemsCanInit(
 		// Using dynamic (application-controller) CAN ID is not supported when max message size is
 		// greater than MCAN_MAX_DATA_SIZE + sizeof(uint32_t), because it would require splitting the
 		// payload - and therefore escaping the data.
-		assert((maxMessageSize(self) <=
+		assert(((size_t)maxMessageSize(self) <=
 			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t))) &&
 		       "incorrect configuration, application-control-can-id cannot be used when payload length is greater than maximum frame size + ID length");
 	}
