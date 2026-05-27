@@ -479,7 +479,7 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 			&self->mcan, Mcan_RxFifoId_0, &fifoStatus, NULL);
 		assert(fifoStatusResult);
 
-		if (fifoStatus.count > 0) {
+		while (fifoStatus.count > 0) {
 			Mcan_RxElement rxElement = { 0 };
 			rxElement.data = self->m_rx_buffer;
 
@@ -523,6 +523,12 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 						rxElement.dataSize);
 				}
 			}
+
+			// Check the fifo status again to drain it, if the frame count > 1
+			const bool drainFifoStatusResult = Mcan_getRxFifoStatus(
+				&self->mcan, Mcan_RxFifoId_0, &fifoStatus,
+				NULL);
+			assert(drainFifoStatusResult);
 		}
 	}
 }
