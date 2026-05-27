@@ -451,20 +451,8 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 		assert(fifoStatusResult);
 
 		if (fifoStatus.count > 0) {
-			Mcan_RxElement rxElement;
-
-			if (self->m_config->address.kind ==
-			    static_can_id_PRESENT) {
-				rxElement.data = self->m_rx_buffer;
-			} else if (self->m_config->address.kind ==
-				   application_control_can_id_PRESENT) {
-				rxElement.data =
-					self->m_rx_buffer +
-					sizeof(uint32_t); // 4 bytes reserved for can-id
-			} else {
-				assert(0 &&
-				       "Unknown static can address value in configuration");
-			}
+			Mcan_RxElement rxElement = { 0 };
+			rxElement.data = self->m_rx_buffer;
 
 			const bool fifoPullResult =
 				Mcan_rxFifoPull(&self->mcan, Mcan_RxFifoId_0,
@@ -485,15 +473,15 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 				if (self->m_config->address.kind ==
 				    application_control_can_id_PRESENT) {
 					// if application controls can-id, then write can-id into first 4 bytes od m_rx_buffer
-					uint32_t *address_pointer =
-						(uint32_t *)&self->m_value_buffer
-							.m_address_byte;
-					*address_pointer = rxElement.id;
-					// id extended standard
+					uint32_t canId = rxElement.id;
 					if (rxElement.idType ==
 					    Mcan_IdType_Extended) {
-						*address_pointer |= 0x20000000u;
+						canId |= 0x20000000u;
 					}
+
+					self->m_value_buffer.m_address_byte =
+						canId;
+
 					memcpy(self->m_value_buffer.m_data +
 						       sizeof(uint32_t),
 					       self->m_rx_buffer,
