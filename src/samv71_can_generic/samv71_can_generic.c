@@ -529,6 +529,9 @@ static void SamV71RtemsCanSendFrame(samv71_can_generic_private_data *const self,
 				    const uint8_t *const data,
 				    const uint8_t length)
 {
+	assert(length <= MCAN_MAX_DATA_SIZE &&
+	       "Trying to send CAN frame longer than maximum supported size!");
+
 	Mcan_TxElement txElement = { 0 };
 	txElement.esiFlag = Mcan_ElementEsi_Dominant;
 	txElement.idType = idType;
@@ -597,6 +600,9 @@ void SamV71RtemsCanSend(void *const private_data, const uint8_t *const data,
 		}
 
 	} else if (ifaceUsesDynamicId(self)) {
+		assert(length >= sizeof(uint32_t) &&
+		       "Not enough data to transmit in dynamic ID config!");
+
 		Mcan_IdType idType = 0;
 		uint32_t id = 0;
 		getCanIdAndTypeFromMessageData(data, length, &idType, &id);
