@@ -40,6 +40,7 @@
 #define SAMV71_CAN_SEND_TIMEOUT 4 /* in systicks */
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
+#define CAN_EXTENDED_ID_BIT 0x20000000u;
 
 static bool isMcanPckConfigured = false;
 static const CAN_Samv71_Rtems_Conf_T *firstConfig = NULL;
@@ -315,7 +316,6 @@ static void getCanIdAndTypeFromMessageData(const uint8_t *const data,
 {
 	// first 29 bits are CAN-ID
 	// the bit 30 determines if CAN-ID is 11-bit (standard) or 29-bit (extended)
-	const uint32_t canIdTypeMask = 0x20000000u;
 	const uint32_t canExtendedIdMask = 0x1fffffffu;
 	const uint32_t canStandardIdMask = 0x000007ffu;
 
@@ -324,22 +324,41 @@ static void getCanIdAndTypeFromMessageData(const uint8_t *const data,
 	memcpy(&address, data, sizeof(uint32_t));
 
 	if (idType != NULL) {
-		*idType = (address & canIdTypeMask) ? Mcan_IdType_Extended :
-						      Mcan_IdType_Standard;
+		*idType = (address & CAN_EXTENDED_ID_BIT) ?
+				  Mcan_IdType_Extended :
+				  Mcan_IdType_Standard;
 	}
 
 	if (id != NULL) {
-		*id = address & canIdTypeMask ? address & canExtendedIdMask :
-						address & canStandardIdMask;
+		*id = (address & CAN_EXTENDED_ID_BIT) ?
+			      address & canExtendedIdMask :
+			      address & canStandardIdMask;
 	}
+}
+
+static bool ifaceUsesStaticId(const samv71_can_generic_private_data *const self)
+{
+	return self->m_config->address.kind == static_can_id_PRESENT;
+}
+
+static bool
+ifaceUsesDynamicId(const samv71_can_generic_private_data *const self)
+{
+	return self->m_config->address.kind ==
+	       application_control_can_id_PRESENT;
+}
+
+static int maxMessageSize(const samv71_can_generic_private_data *const self)
+{
+	return bus_message_size[self->m_bus_id];
 }
 
 static bool shouldUseEscaper(const samv71_can_generic_private_data *const self)
 {
-	// escaper should be initialized only when max message size is greater than
+	// escaper should be used only when max message size is greater than
 	// max CAN frame length, and can-id has static configuration
-	return (self->m_config->address.kind == static_can_id_PRESENT) &&
-	       (bus_message_size[self->m_bus_id] > (int32_t)MCAN_MAX_DATA_SIZE);
+	return ifaceUsesStaticId(self) &&
+	       (maxMessageSize(self) > (int)MCAN_MAX_DATA_SIZE);
 }
 
 void SamV71RtemsCanInit(
@@ -378,17 +397,24 @@ void SamV71RtemsCanInit(
 	assert(setConfResult);
 	assert(errCode == ErrorCode_NoError);
 
+	const size_t decodingBufferSize = sizeof(self->m_value_buffer.m_data);
+	// Defensive programming - make sure that `m_data` buffer is large enough to store decoded message.
+	assert((decodingBufferSize >= maxMessageSize(self)) &&
+	       "Decoding buffer is not large enough to store whole message!");
+
 	if (shouldUseEscaper(self)) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
 			     MCAN_MAX_DATA_SIZE, self->m_value_buffer.m_data,
-			     (size_t)bus_message_size[self->m_bus_id]);
+			     maxMessageSize(self));
 	}
 
-	if (self->m_config->address.kind ==
-	    application_control_can_id_PRESENT) {
-		assert((BROKER_BUFFER_SIZE >=
+	if (ifaceUsesDynamicId(self)) {
+		// Using dynamic (application-controller) CAN ID is not supported when max message size is
+		// greater than MCAN_MAX_DATA_SIZE + sizeof(uint32_t), because it would require splitting the
+		// payload - and therefore escaping the data.
+		assert((maxMessageSize(self) <=
 			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t))) &&
-		       "incorrect configuration, application-control-can-id cannot be used due to broker buffer being too small to accommodate full CAN frame with extended CAN ID.");
+		       "incorrect configuration, application-control-can-id cannot be used when payload length is greater than maximum frame size + ID length");
 	}
 
 	const rtems_status_code status_code_create_rx_sem =
@@ -470,12 +496,11 @@ void SamV71RtemsCanPoll(rtems_task_argument private_data)
 						      &Broker_receive_packet);
 			} else {
 				// without Escaper Broker_receive_packet needs to be called directly
-				if (self->m_config->address.kind ==
-				    application_control_can_id_PRESENT) {
+				if (ifaceUsesDynamicId(self)) {
 					uint32_t canId = rxElement.id;
 					if (rxElement.idType ==
 					    Mcan_IdType_Extended) {
-						canId |= 0x20000000u;
+						canId |= CAN_EXTENDED_ID_BIT;
 					}
 					self->m_value_buffer.m_address = canId;
 
@@ -535,7 +560,7 @@ void SamV71RtemsCanSend(void *const private_data, const uint8_t *const data,
 	samv71_can_generic_private_data *const self =
 		(samv71_can_generic_private_data *const)private_data;
 
-	if (self->m_config->address.kind == static_can_id_PRESENT) {
+	if (ifaceUsesStaticId(self)) {
 		Mcan_IdType idType = Mcan_IdType_Standard;
 		uint32_t id = 0;
 
@@ -571,8 +596,7 @@ void SamV71RtemsCanSend(void *const private_data, const uint8_t *const data,
 			SamV71RtemsCanSendFrame(self, idType, id, data, length);
 		}
 
-	} else if (self->m_config->address.kind ==
-		   application_control_can_id_PRESENT) {
+	} else if (ifaceUsesDynamicId(self)) {
 		Mcan_IdType idType = 0;
 		uint32_t id = 0;
 		getCanIdAndTypeFromMessageData(data, length, &idType, &id);
