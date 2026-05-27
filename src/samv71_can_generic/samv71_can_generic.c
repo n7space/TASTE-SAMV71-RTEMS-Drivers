@@ -129,6 +129,8 @@ static Pmc_PckSrc getPckSource(const CAN_Samv71_Rtems_Conf_T *const config)
 	default:
 		assert(0 &&
 		       "Cannot determine PCK source, unknown configuration value");
+		// for builds with asserts disabled - fallback to Mainck to prevent UB
+		return Pmc_PckSrc_Mainck;
 	}
 }
 
