@@ -408,7 +408,7 @@ void SamV71RtemsCanInit(
 	if (shouldUseEscaper(self)) {
 		Escaper_init(&self->m_escaper, self->m_tx_buffer,
 			     MCAN_MAX_DATA_SIZE, self->m_value_buffer.m_data,
-			     maxMessageSize(self));
+			     (size_t)maxMessageSize(self));
 	}
 
 	if (ifaceUsesDynamicId(self)) {
@@ -423,7 +423,7 @@ void SamV71RtemsCanInit(
 		//   data-size INTEGER [size 8, encoding pos-int],
 		//   data [size data-size]
 		// }
-		assert((maxMessageSize(self) <=
+		assert(((size_t)maxMessageSize(self) <=
 			(MCAN_MAX_DATA_SIZE + sizeof(uint32_t) +
 			 sizeof(uint8_t))) &&
 		       "incorrect configuration, application-control-can-id cannot be used when payload length is greater than maximum frame size + ID + length");
