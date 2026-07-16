@@ -39,7 +39,7 @@
 
 /**
  * @brief MCAN priority definition - !! IMPORTANT !!
- * Interrupts that use RTEMS functions must have  smaller priorities than
+ * Interrupts that use RTEMS functions must have smaller priorities than
  * kernel interrupts levels. The lower the priority value, the
  * higher the priority is. In RTEMS on Cortex-M7, the PRIMASK in critical
  * sections is set to 0x80 - therefore, in order to avoid a
