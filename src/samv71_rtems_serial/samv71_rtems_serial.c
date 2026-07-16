@@ -69,9 +69,9 @@ static Uart *uart4handle;
  * values and writes them directly to NVIC register.
  * Since we use Nvic_setInterruptPriority to set this value, it should be
  * in range 4-7 here.
- * UART IRQs do not use RTEMS primitives, so they can be left at default 0 priority.
  */
 #define UART_XDMAC_INTERRUPT_PRIORITY 4
+#define UART_INTERRUPT_PRIORITY 4
 
 #define XDMAD_NO_POLLING 0
 
@@ -158,18 +158,28 @@ static void SamV71RtemsSerial_Init_global()
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Xdmac, "xdmac",
 			(rtems_interrupt_handler)&XDMAC_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart0);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart0, UART_XDMAC_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart0, "uart0",
 			(rtems_interrupt_handler)&UART0_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart1);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart1, UART_XDMAC_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart1, "uart1",
 			(rtems_interrupt_handler)&UART1_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart2);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart2, UART_XDMAC_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart2, "uart2",
 			(rtems_interrupt_handler)&UART2_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart3);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart3, UART_XDMAC_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart3, "uart3",
 			(rtems_interrupt_handler)&UART3_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart4);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart4, UART_XDMAC_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart4, "uart4",
 			(rtems_interrupt_handler)&UART4_Handler, NULL);
