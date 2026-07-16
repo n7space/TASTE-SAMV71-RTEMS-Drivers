@@ -56,19 +56,20 @@ static Uart *uart4handle;
 
 /**
  * @brief UART/XDMAC priority definition - !! IMPORTANT !!
- * System interrupts priorities levels must be smaller than
+ * Interrupts priorities levels that use RTEMS functions must be smaller than
  * kernel interrupts levels. The lower the priority value, the
  * higher the priority is. In RTEMS on Cortex-M7, the PRIMASK in critical
  * sections is set to 0x80 - therefore, in order to avoid a
- * race condition, IRQ handlers that use RTEMS-related stuff like
- * semaphores, events, etc. **MUST HAVE THEIR PRIORITY SET TO AT LEAST
- * 0x80 (4 after the bit-shift), OR LOWER (so, higher value)**.
- * Safe IRQ priorities are 4, 5, 6 and 7 on SAMV71 and SAMRH71,
+ * race condition (for example, an IRQ preempting internal RTEMS processing
+ * and modifying it's internal data structures in a way unexpected by RTEMS,
+ * potentially causing an undefined behaviour), IRQ handlers that use
+ * RTEMS-related functionality like semaphores, events, etc. **MUST HAVE THEIR
+ * PRIORITY SET TO AT LEAST 0x80 (4 after the bit-shift), OR LOWER (so,
+ * higher value)**.
+ * Safe IRQ priorities are in 4-7 inclusive range on SAMV71 and SAMRH71,
  * which corresponds to values 0x80, 0xA0, 0xC0 and 0xE0 for the
  * rtems_interrupt_set_priority function, as it expects shifted
  * values and writes them directly to NVIC register.
- * Since we use Nvic_setInterruptPriority to set this value, it should be
- * in range 4-7 here.
  */
 #define UART_XDMAC_INTERRUPT_PRIORITY 4
 #define UART_INTERRUPT_PRIORITY 4
