@@ -55,14 +55,24 @@ static Uart *uart3handle;
 static Uart *uart4handle;
 
 /**
- * @brief UART priotity definition
- * System interrupts priorities levels must be smaller than
- * kernel interrupts levels. The lower the priority value the
- * higher the priority is. Thus, the UART interrupt priority value
- * must be equal or greater then configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY.
+ * @brief UART/XDMAC priority definition - !! IMPORTANT !!
+ * Interrupts that use RTEMS functions must have smaller priorities than
+ * kernel interrupts levels. The lower the priority value, the
+ * higher the priority is. In RTEMS on Cortex-M7, the PRIMASK in critical
+ * sections is set to 0x80 - therefore, in order to avoid a
+ * race condition (for example, an IRQ preempting internal RTEMS processing
+ * and modifying it's internal data structures in a way unexpected by RTEMS,
+ * potentially causing an undefined behaviour), IRQ handlers that use
+ * RTEMS-related functionality like semaphores, events, etc. **MUST HAVE THEIR
+ * PRIORITY SET TO AT LEAST 0x80 (4 after the bit-shift), OR LOWER (so,
+ * higher value)**.
+ * Safe IRQ priorities are in 4-7 inclusive range on SAMV71 and SAMRH71,
+ * which corresponds to values 0x80, 0xA0, 0xC0 and 0xE0 for the
+ * rtems_interrupt_set_priority function, as it expects shifted
+ * values and writes them directly to NVIC register.
  */
-#define UART_INTERRUPT_PRIORITY RTEMS_MAXIMUM_PRIORITY
-#define UART_XDMAC_INTERRUPT_PRIORITY UART_INTERRUPT_PRIORITY
+#define UART_XDMAC_INTERRUPT_PRIORITY 4
+#define UART_INTERRUPT_PRIORITY 4
 
 #define XDMAD_NO_POLLING 0
 
@@ -149,18 +159,28 @@ static void SamV71RtemsSerial_Init_global()
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Xdmac, "xdmac",
 			(rtems_interrupt_handler)&XDMAC_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart0);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart0, UART_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart0, "uart0",
 			(rtems_interrupt_handler)&UART0_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart1);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart1, UART_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart1, "uart1",
 			(rtems_interrupt_handler)&UART1_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart2);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart2, UART_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart2, "uart2",
 			(rtems_interrupt_handler)&UART2_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart3);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart3, UART_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart3, "uart3",
 			(rtems_interrupt_handler)&UART3_Handler, NULL);
+		Nvic_clearInterruptPending(Nvic_Irq_Uart4);
+		Nvic_setInterruptPriority(Nvic_Irq_Uart4, UART_INTERRUPT_PRIORITY);
 		SamV71Core_InterruptSubscribe(
 			Nvic_Irq_Uart4, "uart4",
 			(rtems_interrupt_handler)&UART4_Handler, NULL);

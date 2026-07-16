@@ -37,6 +37,25 @@
 #include <system_spec.h>
 #include <SamV71Core.h>
 
+/**
+ * @brief MCAN priority definition - !! IMPORTANT !!
+ * Interrupts that use RTEMS functions must have smaller priorities than
+ * kernel interrupts levels. The lower the priority value, the
+ * higher the priority is. In RTEMS on Cortex-M7, the PRIMASK in critical
+ * sections is set to 0x80 - therefore, in order to avoid a
+ * race condition (for example, an IRQ preempting internal RTEMS processing
+ * and modifying it's internal data structures in a way unexpected by RTEMS,
+ * potentially causing an undefined behaviour), IRQ handlers that use
+ * RTEMS-related functionality like semaphores, events, etc. **MUST HAVE THEIR
+ * PRIORITY SET TO AT LEAST 0x80 (4 after the bit-shift), OR LOWER (so,
+ * higher value)**.
+ * Safe IRQ priorities are in 4-7 inclusive range on SAMV71 and SAMRH71,
+ * which corresponds to values 0x80, 0xA0, 0xC0 and 0xE0 for the
+ * rtems_interrupt_set_priority function, as it expects shifted
+ * values and writes them directly to NVIC register.
+ */
+#define MCAN_INTERRUPT_PRIORITY 4
+
 #define SAMV71_CAN_SEND_TIMEOUT 4 /* in systicks */
 #define CONFIG_TIMEOUT 1000u
 #define MCAN_MAX_DATA_SIZE 8u
@@ -176,6 +195,8 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 	configurePioCan0(&self->pioCanTx);
 	configureMcanPck(self->m_config);
 
+	Nvic_clearInterruptPending(Nvic_Irq_Mcan0_Irq0);
+	Nvic_setInterruptPriority(Nvic_Irq_Mcan0_Irq0, MCAN_INTERRUPT_PRIORITY);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan0_Irq0, "mcan0_0",
 				      mcan_int0_Handler, self);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan0);
@@ -186,6 +207,9 @@ static void configureMcan1(samv71_can_generic_private_data *const self)
 {
 	configurePioCan1(&self->pioCanTx);
 	configureMcanPck(self->m_config);
+
+	Nvic_clearInterruptPending(Nvic_Irq_Mcan1_Irq0);
+	Nvic_setInterruptPriority(Nvic_Irq_Mcan1_Irq0, MCAN_INTERRUPT_PRIORITY);
 	SamV71Core_InterruptSubscribe(Nvic_Irq_Mcan1_Irq0, "mcan1_0",
 				      mcan_int0_Handler, self);
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_Mcan1);
