@@ -55,7 +55,7 @@ static Uart *uart3handle;
 static Uart *uart4handle;
 
 /**
- * @brief XDMAC priority definition - !! IMPORTANT !!
+ * @brief UART/XDMAC priority definition - !! IMPORTANT !!
  * System interrupts priorities levels must be smaller than
  * kernel interrupts levels. The lower the priority value, the
  * higher the priority is. In RTEMS on Cortex-M7, the PRIMASK in critical
