@@ -260,8 +260,12 @@ static void configureMcan1(samv71_can_generic_private_data *const self)
 {
 	if (self->m_config->mcan1_tx_pin == mcan1_tx_pc14) {
 		configurePioCan1();
-	} else {
+	} else if (self->m_config->mcan1_tx_pin == mcan1_tx_pd12) {
 		configurePioCan1AltPins();
+	} else {
+		assert(false && "Invalid MCAN1 pin configuration!");
+		// nothing do to; MCAN will not work without pins config.
+		return;
 	}
 	configureMcanPck(self->m_config);
 
