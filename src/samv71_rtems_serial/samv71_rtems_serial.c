@@ -712,20 +712,50 @@ static void uartRxCallback(void *private_data)
 
 static void initUartRxHandler(samv71_rtems_serial_private_data *const self)
 {
-	self->m_uart_rx_handler.lengthCallback = uartRxCallback;
-	self->m_uart_rx_handler.lengthArg = self;
-	self->m_uart_rx_handler.characterCallback = uartRxCallback;
-	self->m_uart_rx_handler.characterArg = self;
-	if (self->m_raw_mode) {
-		self->m_uart_rx_handler.targetCharacter = 0xC0;
-		self->m_uart_rx_handler.targetLength =
-			Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
-	} else {
+	switch (self->m_mode.kind) {
+	case raw_PRESENT:
+		switch (self->m_mode.u.raw.kind) {
+		case single_byte_PRESENT:
+			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
+			self->m_uart_rx_handler.lengthArg = self;
+			self->m_uart_rx_handler.characterCallback = NULL;
+			self->m_uart_rx_handler.targetLength = 1;
+			break;
+		case custom_escape_byte_PRESENT:
+			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
+			self->m_uart_rx_handler.lengthArg = self;
+			self->m_uart_rx_handler.characterCallback = uartRxCallback;
+			self->m_uart_rx_handler.characterArg = self;
+			self->m_uart_rx_handler.targetCharacter =
+				self->m_mode.u.raw.u.custom_escape_byte;
+			self->m_uart_rx_handler.targetLength =
+				Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
+			break;
+		default:
+			// If this branch is hit, then the user provided configuration is invalid,
+			// or something went very wrong and the program will enter invalid state, so
+			// the safest course of action is to assert and abort (if the asserts are
+			// disabled).
+			assert(false && "Not supported raw mode kind");
+			abort();
+		}
+		break;
+	case escaped_packets_PRESENT:
+		self->m_uart_rx_handler.lengthCallback = uartRxCallback;
+		self->m_uart_rx_handler.lengthArg = self;
 		self->m_uart_rx_handler.characterCallback = uartRxCallback;
 		self->m_uart_rx_handler.characterArg = self;
 		self->m_uart_rx_handler.targetCharacter = STOP_BYTE;
 		self->m_uart_rx_handler.targetLength =
 			Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
+		break;
+	default:
+		// If this branch is hit, then the user provided configuration is invalid,
+		// or something went very wrong and the program will enter invalid state, so
+		// the safest course of action is to assert and abort (if the asserts are
+		// disabled).
+		assert(false && "Not supported mode kind");
+		abort();
 	}
 }
 
@@ -785,8 +815,7 @@ void Samv71RtemsSerialInit(
 		(samv71_rtems_serial_private_data *)private_data;
 
 	self->m_ip_device_bus_id = bus_id;
-	self->m_raw_mode = device_configuration->transmit_mode ==
-			   Serial_SamV71_Rtems_Transmit_Mode_T_raw_single_byte;
+	self->m_mode = device_configuration->mode;
 
 	initUart(self, device_configuration);
 	initUartRxHandler(self);
@@ -824,7 +853,7 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 	samv71_rtems_serial_private_data *self =
 		(samv71_rtems_serial_private_data *)private_data;
 
-	if (!self->m_raw_mode) {
+	if (self->m_mode.kind != raw_PRESENT) {
 		// if raw mode is disabled, start the Escaper's decoder
 		Escaper_start_decoder(&self->m_escaper);
 	}
@@ -850,7 +879,7 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 			}
 			exitCriticalSection(self, irqMask);
 
-			if (self->m_raw_mode) {
+			if (self->m_mode.kind == raw_PRESENT) {
 				// if raw mode is enabled, call the Broker directly
 				for (size_t i = 0; i < length; i++) {
 					Broker_receive_packet(
@@ -876,7 +905,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 		(samv71_rtems_serial_private_data *)private_data;
 	size_t index = 0;
 
-	if (!self->m_raw_mode) {
+	if (self->m_mode.kind != raw_PRESENT) {
 		// if raw mode is disabled, start the Escaper's encoder
 		// and use it to process all the data before sending
 		Escaper_start_encoder(&self->m_escaper);

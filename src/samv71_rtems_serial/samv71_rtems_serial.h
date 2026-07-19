@@ -25,7 +25,6 @@
  * @brief    Driver for TASTE for SAMV71 UART
  */
 
-#include "Xdmac/xdmad.h"
 #include "samv71_rtems_serial_internal.h"
 
 #include <rtems.h>
@@ -82,7 +81,7 @@ typedef struct {
   Uart_TxHandler m_uart_tx_handler;
   Uart_ErrorHandler m_uart_error_handler;
   rtems_id m_tx_semaphore;
-  bool m_raw_mode;
+  Serial_SamV71_Rtems_Mode_T m_mode;
 } samv71_rtems_serial_private_data;
 
 /**
