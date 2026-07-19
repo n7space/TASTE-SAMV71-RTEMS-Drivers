@@ -99,7 +99,7 @@ waitForTransmissionFinished(const samv71_can_generic_private_data *const self,
 	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
 }
 
-static void configurePioCan0(Pio *const pio)
+static void configurePioCan0()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralA,
@@ -115,17 +115,18 @@ static void configurePioCan0(Pio *const pio)
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 	ErrorCode errorCode = 0;
 
-	const bool pioInitStatus = Pio_init(Pio_Port_B, pio, &errorCode);
+	Pio pio;
+	const bool pioInitStatus = Pio_init(Pio_Port_B, &pio, &errorCode);
 	assert(pioInitStatus);
 	assert(errorCode == ErrorCode_NoError);
 
 	const bool pioSetConfigStatus = Pio_setPinsConfig(
-		pio, PIO_PIN_2 | PIO_PIN_3, &pioCanTxConfig, &errorCode);
+		&pio, PIO_PIN_2 | PIO_PIN_3, &pioCanTxConfig, &errorCode);
 	assert(pioSetConfigStatus);
 	assert(errorCode == ErrorCode_NoError);
 }
 
-static void configurePioCan1(Pio *const pio)
+static void configurePioCan1()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralC,
@@ -141,13 +142,63 @@ static void configurePioCan1(Pio *const pio)
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
 	ErrorCode errorCode = 0;
 
-	const bool pioInitStatus = Pio_init(Pio_Port_C, pio, &errorCode);
+	Pio pio;
+	const bool pioInitStatus = Pio_init(Pio_Port_C, &pio, &errorCode);
 	assert(pioInitStatus);
 	assert(errorCode == ErrorCode_NoError);
 
 	const bool pioSetConfigStatus = Pio_setPinsConfig(
-		pio, PIO_PIN_14 | PIO_PIN_12, &pioCanTxConfig, &errorCode);
+		&pio, PIO_PIN_14 | PIO_PIN_12, &pioCanTxConfig, &errorCode);
 	assert(pioSetConfigStatus);
+	assert(errorCode == ErrorCode_NoError);
+}
+
+static void configurePioCan1AltPins()
+{
+	const Pio_Pin_Config pioCanTxConfig = {
+		.control = Pio_Control_PeripheralB,
+		.direction = Pio_Direction_Output,
+		.pull = Pio_Pull_Up,
+		.filter = Pio_Filter_None,
+		.isMultiDriveEnabled = false,
+		.irq = Pio_Irq_None,
+		.driveStrength = Pio_Drive_Low,
+		.isSchmittTriggerDisabled = false,
+	};
+
+	const Pio_Pin_Config pioCanRxConfig = {
+		.control = Pio_Control_PeripheralC,
+		.direction = Pio_Direction_Output,
+		.pull = Pio_Pull_Up,
+		.filter = Pio_Filter_None,
+		.isMultiDriveEnabled = false,
+		.irq = Pio_Irq_None,
+		.driveStrength = Pio_Drive_Low,
+		.isSchmittTriggerDisabled = false,
+	};
+
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioD);
+	ErrorCode errorCode = 0;
+
+	Pio pioRx;
+	const bool pioRxInitStatus = Pio_init(Pio_Port_C, &pioRx, &errorCode);
+	assert(pioRxInitStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	const bool pioRxSetConfigStatus = Pio_setPinsConfig(
+		&pioRx, PIO_PIN_12, &pioCanRxConfig, &errorCode);
+	assert(pioRxSetConfigStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	Pio pioTx;
+	const bool pioTxInitStatus = Pio_init(Pio_Port_D, &pioTx, &errorCode);
+	assert(pioTxInitStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	const bool pioTxSetConfigStatus = Pio_setPinsConfig(
+		&pioTx, PIO_PIN_12, &pioCanTxConfig, &errorCode);
+	assert(pioTxSetConfigStatus);
 	assert(errorCode == ErrorCode_NoError);
 }
 
@@ -192,7 +243,7 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 
 static void configureMcan0(samv71_can_generic_private_data *const self)
 {
-	configurePioCan0(&self->pioCanTx);
+	configurePioCan0();
 	configureMcanPck(self->m_config);
 
 	Nvic_clearInterruptPending(Nvic_Irq_Mcan0_Irq0);
@@ -205,7 +256,11 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 
 static void configureMcan1(samv71_can_generic_private_data *const self)
 {
-	configurePioCan1(&self->pioCanTx);
+	if (self->m_config->use_alt_mcan1_pin) {
+		configurePioCan1AltPins();
+	} else {
+		configurePioCan1();
+	}
 	configureMcanPck(self->m_config);
 
 	Nvic_clearInterruptPending(Nvic_Irq_Mcan1_Irq0);
