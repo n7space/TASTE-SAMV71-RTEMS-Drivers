@@ -48,11 +48,14 @@ SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
     -- MCAN1 can be configured to use either PC14 or PD12 as TX pin.
     -- By default, driver will use PC14. Setting this to "true" makes it use PD12.
     -- It has no effect for MCAN0, as MCAN0 can use only PB2 and PB3.
-    CAN-Samv71-Rtems-Mcan1-Use-PD12-Tx ::= BOOLEAN
+    CAN-Samv71-Rtems-Mcan1-Tx-Pin ::= ENUMERATED {
+        mcan1-tx-pc14,
+        mcan1-tx-pd12
+    }
 
     CAN-Samv71-Rtems-Conf-T ::= SEQUENCE {
         can-interface CAN-Samv71-Rtems-Interface-T,
-        mcan1-use-pd12-tx-pin CAN-Samv71-Rtems-Mcan1-Use-PD12-Tx,
+        mcan1-tx-pin CAN-Samv71-Rtems-Mcan1-Tx-Pin,
         bit-rate-prescaler CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler DEFAULT 0,
         synchronization-jump CAN-Samv71-Rtems-Data-Synchronization-Jump-Width DEFAULT 2,
         time-segments-after-sample-point CAN-Samv71-Rtems-Data-Time-Segment-After-Sample-Point DEFAULT 2,

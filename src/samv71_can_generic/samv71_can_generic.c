@@ -126,6 +126,7 @@ static void configurePioCan0()
 	assert(errorCode == ErrorCode_NoError);
 }
 
+// Configures MCAN1 to use PC12 as RX and PC14 as TX
 static void configurePioCan1()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
@@ -153,6 +154,7 @@ static void configurePioCan1()
 	assert(errorCode == ErrorCode_NoError);
 }
 
+// Configures MCAN1 to use PC12 as RX and PD12 as TX
 static void configurePioCan1AltPins()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
@@ -256,10 +258,10 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 
 static void configureMcan1(samv71_can_generic_private_data *const self)
 {
-	if (self->m_config->mcan1_use_pd12_tx_pin) {
-		configurePioCan1AltPins();
-	} else {
+	if (self->m_config->mcan1_tx_pin == mcan1_tx_pc14) {
 		configurePioCan1();
+	} else {
+		configurePioCan1AltPins();
 	}
 	configureMcanPck(self->m_config);
 
