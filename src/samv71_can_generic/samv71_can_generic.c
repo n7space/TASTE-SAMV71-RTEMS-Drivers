@@ -127,7 +127,7 @@ static void configurePioCan0()
 }
 
 // Configures MCAN1 to use PC12 as RX and PC14 as TX
-static void configurePioCan1()
+static void configurePioCan1Pc12Pc14()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralC,
@@ -155,7 +155,7 @@ static void configurePioCan1()
 }
 
 // Configures MCAN1 to use PC12 as RX and PD12 as TX
-static void configurePioCan1AltPins()
+static void configurePioCan1Pc12Pd12()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralB,
@@ -258,11 +258,14 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 
 static void configureMcan1(samv71_can_generic_private_data *const self)
 {
-	if (self->m_config->mcan1_tx_pin == mcan1_tx_pc14) {
-		configurePioCan1();
-	} else if (self->m_config->mcan1_tx_pin == mcan1_tx_pd12) {
-		configurePioCan1AltPins();
-	} else {
+	switch (self->m_config->can_interface.u.mcan1.tx) {
+	case CAN_Samv71_Rtems_Interface_T_mcan1_tx_pc14:
+		configurePioCan1Pc12Pc14();
+		break;
+	case CAN_Samv71_Rtems_Interface_T_mcan1_tx_pd12:
+		configurePioCan1Pc12Pd12();
+		break;
+	default:
 		assert(false && "Invalid MCAN1 pin configuration!");
 		// nothing do to; MCAN will not work without pins config.
 		return;
@@ -466,12 +469,14 @@ void SamV71RtemsCanInit(
 	self->m_bus_id = bus_id;
 	self->m_config = device_configuration;
 
-	if (self->m_config->can_interface == mcan_interface_mcan0) {
+	switch (self->m_config->can_interface.kind) {
+	case mcan0_PRESENT:
 		configureMcan0(self);
-	} else if (device_configuration->can_interface ==
-		   mcan_interface_mcan1) {
+		break;
+	case mcan1_PRESENT:
 		configureMcan1(self);
-	} else {
+		break;
+	default:
 		assert(0 &&
 		       "unknown mcan value of can-interface in configuration");
 		return;
