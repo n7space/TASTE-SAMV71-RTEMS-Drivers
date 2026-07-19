@@ -256,7 +256,7 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 
 static void configureMcan1(samv71_can_generic_private_data *const self)
 {
-	if (self->m_config->use_alt_mcan1_pin) {
+	if (self->m_config->mcan1_use_pd12_tx_pin) {
 		configurePioCan1AltPins();
 	} else {
 		configurePioCan1();
