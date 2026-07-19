@@ -27,13 +27,24 @@ Serial-SamV71-Rtems-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b
 
 Serial-SamV71-Rtems-Parity-T    ::= ENUMERATED {even, odd, none}
 
-Serial-SamV71-Rtems-Transmit-Mode-T    ::= ENUMERATED {escaped-packets, raw-single-byte}
+Serial-SamV71-Escape-Byte-T ::= INTEGER(0..255)
+
+-- The choice option cannot be NULL or empty SEQUENCE to work with space creator.
+Serial-Samv71-Rtems-Dummy ::= BOOLEAN
+
+Serial-SamV71-Rtems-Mode-T    ::= CHOICE {
+   escaped-packets BOOLEAN,
+   raw CHOICE {
+      single-byte         Serial-Samv71-Rtems-Dummy,
+      custom-escape-byte  Serial-SamV71-Escape-Byte-T
+   }
+}
 
 Serial-SamV71-Rtems-Conf-T ::= SEQUENCE {
    devname        Serial-SamV71-Rtems-Device-T,
    speed          Serial-SamV71-Rtems-Baudrate-T,
    parity         Serial-SamV71-Rtems-Parity-T,
-   transmit-mode  Serial-SamV71-Rtems-Transmit-Mode-T DEFAULT escaped-packets
+   mode           Serial-SamV71-Rtems-Mode-T
 }
 
 END
