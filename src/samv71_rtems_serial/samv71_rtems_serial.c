@@ -627,7 +627,7 @@ static void uartWriteBlocking(Samv71RtemsSerial_Uart *const halUart,
 {
 	ErrorCode errCode = ErrorCode_NoError;
 	for (uint16_t i = 0; i < length; i++) {
-		Uart_write(halUart->uart, buffer[i],
+		Uart_write(&halUart->uart, buffer[i],
 			   UART_BLOCKING_WRITE_TIMEOUT, &errCode);
 		assert(errCode == ErrorCode_NoError);
 	}
@@ -944,10 +944,12 @@ blockingTxModeEnabled(const samv71_rtems_serial_private_data *const self)
  * @brief Packet write function signature.
  *
  * Used to abstract over blocking vs async TX modes.
+ * Receives @p self to access both the UART and the TX semaphore.
  */
-typedef void (*Samv71RtemsSerial_WritePacketFn)(Samv71RtemsSerial_Uart *const,
-						const uint8_t *const,
-						const uint16_t);
+typedef void (*Samv71RtemsSerial_WritePacketFn)(
+	samv71_rtems_serial_private_data *const self,
+	const uint8_t *const buffer,
+	const uint16_t length);
 
 /**
  * @brief Encode data with Escaper and send each encoded packet.
@@ -966,7 +968,7 @@ static void sendEscapedPackets(samv71_rtems_serial_private_data *const self,
 		const size_t packetLength = Escaper_encode_packet(
 			&self->m_escaper, data, length, &index);
 
-		writePacket(&self->m_hal_uart, &self->m_encoded_packet_buffer,
+		writePacket(self, self->m_encoded_packet_buffer,
 			    packetLength);
 	}
 }
@@ -982,14 +984,20 @@ waitForTxSemaphore(samv71_rtems_serial_private_data *const self)
 /**
  * @brief Write callback for async TX mode: semaphore wait then DMA send.
  */
-static void asyncWritePacket(Samv71RtemsSerial_Uart *const halUart,
-			     uint8_t *const buffer, const uint16_t length)
+static void asyncWritePacket(samv71_rtems_serial_private_data *const self,
+			     const uint8_t *const buffer, const uint16_t length)
 {
-	const samv71_rtems_serial_private_data *const self =
-		(samv71_rtems_serial_private_data *)halUart->uart.priv;
-
 	waitForTxSemaphore(self);
-	uartWriteAsync(halUart, buffer, length, &self->m_uart_tx_handler);
+	uartWriteAsync(&self->m_hal_uart, buffer, length, &self->m_uart_tx_handler);
+}
+
+/**
+ * @brief Write callback for blocking TX mode: direct register write.
+ */
+static void blockingWritePacket(samv71_rtems_serial_private_data *const self,
+				const uint8_t *const buffer, const uint16_t length)
+{
+	uartWriteBlocking(&self->m_hal_uart, buffer, length);
 }
 
 void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
@@ -1002,7 +1010,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 		// Escaped packets mode: encode then send
 		if (blockingTxModeEnabled(self)) {
 			sendEscapedPackets(self, data, length,
-					   uartWriteBlocking);
+					   blockingWritePacket);
 		} else {
 			sendEscapedPackets(self, data, length,
 					   asyncWritePacket);
