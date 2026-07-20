@@ -391,17 +391,17 @@ initUartPin(const Samv71RtemsSerial_UartPinConfig *const pinConfig,
 	    Pio_Direction direction)
 {
 	Pio_Port_Config pioConfig = {.pinsConfig =
-                                   {
-                                       .pull = Pio_Pull_Up,
-                                       .filter = Pio_Filter_None,
-                                       .isMultiDriveEnabled = false,
-                                       .isSchmittTriggerDisabled = false,
-                                       .irq = Pio_Irq_None,
-                                       .direction = direction,
-                                       .control = pinConfig->control,
-                                   },
-                               .debounceFilterDiv = 0,
-                               .pins = pinConfig->pinMask};
+								   {
+									   .pull = Pio_Pull_Up,
+									   .filter = Pio_Filter_None,
+									   .isMultiDriveEnabled = false,
+									   .isSchmittTriggerDisabled = false,
+									   .irq = Pio_Irq_None,
+									   .direction = direction,
+									   .control = pinConfig->control,
+								   },
+							   .debounceFilterDiv = 0,
+							   .pins = pinConfig->pinMask};
 	Pio pio;
 	ErrorCode errorCode = 0;
 
@@ -735,13 +735,14 @@ static void uartRxCallback(void *private_data)
 
 static void initUartRxHandler(samv71_rtems_serial_private_data *const self)
 {
-	switch (self->m_mode.kind) {
+	switch (self->m_packetizer_mode.kind) {
 	case raw_PRESENT:
-		switch (self->m_mode.u.raw.kind) {
+		switch (self->m_packetizer_mode.u.raw.kind) {
 		case single_byte_PRESENT:
 			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
 			self->m_uart_rx_handler.lengthArg = self;
 			self->m_uart_rx_handler.characterCallback = NULL;
+			self->m_uart_rx_handler.characterArg = NULL;
 			self->m_uart_rx_handler.targetLength = 1;
 			break;
 		case custom_escape_byte_PRESENT:
@@ -751,7 +752,8 @@ static void initUartRxHandler(samv71_rtems_serial_private_data *const self)
 				uartRxCallback;
 			self->m_uart_rx_handler.characterArg = self;
 			self->m_uart_rx_handler.targetCharacter =
-				self->m_mode.u.raw.u.custom_escape_byte;
+				self->m_packetizer_mode.u.raw.u
+					.custom_escape_byte;
 			self->m_uart_rx_handler.targetLength =
 				Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
 			break;
@@ -839,7 +841,8 @@ void Samv71RtemsSerialInit(
 		(samv71_rtems_serial_private_data *)private_data;
 
 	self->m_ip_device_bus_id = bus_id;
-	self->m_mode = device_configuration->mode;
+	self->m_packetizer_mode = device_configuration->packetizer_mode;
+	self->m_tx_mode = device_configuration->tx_mode;
 
 	initUart(self, device_configuration);
 	initUartRxHandler(self);
@@ -872,18 +875,25 @@ void Samv71RtemsSerialInit(
 	assert(taskStartStatus == RTEMS_SUCCESSFUL);
 }
 
+static inline bool
+rawModeEnabled(const samv71_rtems_serial_private_data *const self)
+{
+	return self->m_packetizer_mode.kind == raw_PRESENT;
+}
+
 void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 {
 	samv71_rtems_serial_private_data *self =
 		(samv71_rtems_serial_private_data *)private_data;
 
-	if (self->m_mode.kind != raw_PRESENT) {
+	if (!rawModeEnabled(self)) {
 		// if raw mode is disabled, start the Escaper's decoder
 		Escaper_start_decoder(&self->m_escaper);
 	}
 
 	uartRead(&self->m_hal_uart, self->m_fifo_memory_block,
 		 Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE, self->m_uart_rx_handler);
+
 	while (true) {
 		rtems_event_set received_events = 0;
 		/// Wait for data to arrive - event shall be triggered by ISR
@@ -903,7 +913,7 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 			}
 			exitCriticalSection(self, irqMask);
 
-			if (self->m_mode.kind == raw_PRESENT) {
+			if (rawModeEnabled(self)) {
 				// if raw mode is enabled, call the Broker directly
 				for (size_t i = 0; i < length; i++) {
 					Broker_receive_packet(
@@ -922,42 +932,79 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 	}
 }
 
+static inline bool
+blockingTxModeEnabled(const samv71_rtems_serial_private_data *const self)
+{
+	return self->m_tx_mode == Serial_SamV71_Rtems_Tx_Mode_T_blocking;
+}
+
 void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 			   const size_t length)
 {
 	samv71_rtems_serial_private_data *const self =
 		(samv71_rtems_serial_private_data *)private_data;
-	size_t index = 0;
 
-	if (self->m_mode.kind != raw_PRESENT) {
-		// if raw mode is disabled, start the Escaper's encoder
-		// and use it to process all the data before sending
-		Escaper_start_encoder(&self->m_escaper);
+	if (blockingTxModeEnabled(self)) {
+		// Blocking TX mode: send data synchronously without semaphore
+		if (!rawModeEnabled(self)) {
+			// if raw mode is disabled, start the Escaper's encoder
+			// and use it to process all the data before sending
+			Escaper_start_encoder(&self->m_escaper);
+			size_t index = 0;
 
-		while (index < length) {
-			const size_t packetLength = Escaper_encode_packet(
-				&self->m_escaper, data, length, &index);
+			while (index < length) {
+				const size_t packetLength =
+					Escaper_encode_packet(&self->m_escaper,
+							      data, length,
+							      &index);
 
+				uartWriteBlocking(
+					&self->m_hal_uart,
+					(uint8_t *const)&self
+						->m_encoded_packet_buffer,
+					packetLength);
+			}
+		} else {
+			// otherwise skip the encoding and send the data directly
+			uartWriteBlocking(&self->m_hal_uart, data, length);
+		}
+	} else {
+		// Async TX mode: use DMA with semaphore synchronization
+		if (!rawModeEnabled(self)) {
+			// if raw mode is disabled, start the Escaper's encoder
+			// and use it to process all the data before sending
+			Escaper_start_encoder(&self->m_escaper);
+
+			while (index < length) {
+				const size_t packetLength =
+					Escaper_encode_packet(&self->m_escaper,
+							      data, length,
+							      &index);
+
+				// wait for completion of previous transfer
+				const rtems_status_code obtainResult =
+					rtems_semaphore_obtain(
+						self->m_tx_semaphore,
+						RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+				assert(obtainResult == RTEMS_SUCCESSFUL);
+
+				uartWriteAsync(
+					&self->m_hal_uart,
+					(uint8_t *const)&self
+						->m_encoded_packet_buffer,
+					packetLength, &self->m_uart_tx_handler);
+			}
+		} else {
+			// otherwise skip the encoding and send the data directly
 			// wait for completion of previous transfer
 			const rtems_status_code obtainResult =
 				rtems_semaphore_obtain(self->m_tx_semaphore,
 						       RTEMS_WAIT,
 						       RTEMS_NO_TIMEOUT);
 			assert(obtainResult == RTEMS_SUCCESSFUL);
-
-			uartWriteAsync(
-				&self->m_hal_uart,
-				(uint8_t *const)&self->m_encoded_packet_buffer,
-				packetLength, &self->m_uart_tx_handler);
+			uartWriteAsync(&self->m_hal_uart, data, length,
+				       &self->m_uart_tx_handler);
 		}
-	} else {
-		// otherwise skip the encoding and send the data directly
-		// wait for completion of previous transfer
-		const rtems_status_code obtainResult = rtems_semaphore_obtain(
-			self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
-		assert(obtainResult == RTEMS_SUCCESSFUL);
-		uartWriteAsync(&self->m_hal_uart, data, length,
-			       &self->m_uart_tx_handler);
 	}
 }
 
