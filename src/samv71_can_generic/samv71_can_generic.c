@@ -99,7 +99,7 @@ waitForTransmissionFinished(const samv71_can_generic_private_data *const self,
 	return Mcan_txBufferIsTransmissionFinished(&self->mcan, index);
 }
 
-static void configurePioCan0(Pio *const pio)
+static void configurePioCan0()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralA,
@@ -115,17 +115,19 @@ static void configurePioCan0(Pio *const pio)
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioB);
 	ErrorCode errorCode = 0;
 
-	const bool pioInitStatus = Pio_init(Pio_Port_B, pio, &errorCode);
+	Pio pio;
+	const bool pioInitStatus = Pio_init(Pio_Port_B, &pio, &errorCode);
 	assert(pioInitStatus);
 	assert(errorCode == ErrorCode_NoError);
 
 	const bool pioSetConfigStatus = Pio_setPinsConfig(
-		pio, PIO_PIN_2 | PIO_PIN_3, &pioCanTxConfig, &errorCode);
+		&pio, PIO_PIN_2 | PIO_PIN_3, &pioCanTxConfig, &errorCode);
 	assert(pioSetConfigStatus);
 	assert(errorCode == ErrorCode_NoError);
 }
 
-static void configurePioCan1(Pio *const pio)
+// Configures MCAN1 to use PC12 as RX and PC14 as TX
+static void configurePioCan1Pc12Pc14()
 {
 	const Pio_Pin_Config pioCanTxConfig = {
 		.control = Pio_Control_PeripheralC,
@@ -141,13 +143,64 @@ static void configurePioCan1(Pio *const pio)
 	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
 	ErrorCode errorCode = 0;
 
-	const bool pioInitStatus = Pio_init(Pio_Port_C, pio, &errorCode);
+	Pio pio;
+	const bool pioInitStatus = Pio_init(Pio_Port_C, &pio, &errorCode);
 	assert(pioInitStatus);
 	assert(errorCode == ErrorCode_NoError);
 
 	const bool pioSetConfigStatus = Pio_setPinsConfig(
-		pio, PIO_PIN_14 | PIO_PIN_12, &pioCanTxConfig, &errorCode);
+		&pio, PIO_PIN_14 | PIO_PIN_12, &pioCanTxConfig, &errorCode);
 	assert(pioSetConfigStatus);
+	assert(errorCode == ErrorCode_NoError);
+}
+
+// Configures MCAN1 to use PC12 as RX and PD12 as TX
+static void configurePioCan1Pc12Pd12()
+{
+	const Pio_Pin_Config pioCanTxConfig = {
+		.control = Pio_Control_PeripheralB,
+		.direction = Pio_Direction_Output,
+		.pull = Pio_Pull_Up,
+		.filter = Pio_Filter_None,
+		.isMultiDriveEnabled = false,
+		.irq = Pio_Irq_None,
+		.driveStrength = Pio_Drive_Low,
+		.isSchmittTriggerDisabled = false,
+	};
+
+	const Pio_Pin_Config pioCanRxConfig = {
+		.control = Pio_Control_PeripheralC,
+		.direction = Pio_Direction_Output,
+		.pull = Pio_Pull_Up,
+		.filter = Pio_Filter_None,
+		.isMultiDriveEnabled = false,
+		.irq = Pio_Irq_None,
+		.driveStrength = Pio_Drive_Low,
+		.isSchmittTriggerDisabled = false,
+	};
+
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioC);
+	SamV71Core_EnablePeripheralClock(Pmc_PeripheralId_PioD);
+	ErrorCode errorCode = 0;
+
+	Pio pioRx;
+	const bool pioRxInitStatus = Pio_init(Pio_Port_C, &pioRx, &errorCode);
+	assert(pioRxInitStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	const bool pioRxSetConfigStatus = Pio_setPinsConfig(
+		&pioRx, PIO_PIN_12, &pioCanRxConfig, &errorCode);
+	assert(pioRxSetConfigStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	Pio pioTx;
+	const bool pioTxInitStatus = Pio_init(Pio_Port_D, &pioTx, &errorCode);
+	assert(pioTxInitStatus);
+	assert(errorCode == ErrorCode_NoError);
+
+	const bool pioTxSetConfigStatus = Pio_setPinsConfig(
+		&pioTx, PIO_PIN_12, &pioCanTxConfig, &errorCode);
+	assert(pioTxSetConfigStatus);
 	assert(errorCode == ErrorCode_NoError);
 }
 
@@ -192,7 +245,7 @@ static void configureMcanPck(const CAN_Samv71_Rtems_Conf_T *const config)
 
 static void configureMcan0(samv71_can_generic_private_data *const self)
 {
-	configurePioCan0(&self->pioCanTx);
+	configurePioCan0();
 	configureMcanPck(self->m_config);
 
 	Nvic_clearInterruptPending(Nvic_Irq_Mcan0_Irq0);
@@ -205,7 +258,18 @@ static void configureMcan0(samv71_can_generic_private_data *const self)
 
 static void configureMcan1(samv71_can_generic_private_data *const self)
 {
-	configurePioCan1(&self->pioCanTx);
+	switch (self->m_config->can_interface.u.mcan1.tx) {
+	case CAN_Samv71_Rtems_Interface_T_mcan1_tx_pc14:
+		configurePioCan1Pc12Pc14();
+		break;
+	case CAN_Samv71_Rtems_Interface_T_mcan1_tx_pd12:
+		configurePioCan1Pc12Pd12();
+		break;
+	default:
+		assert(false && "Invalid MCAN1 pin configuration!");
+		// nothing do to; MCAN will not work without pins config.
+		return;
+	}
 	configureMcanPck(self->m_config);
 
 	Nvic_clearInterruptPending(Nvic_Irq_Mcan1_Irq0);
@@ -405,12 +469,14 @@ void SamV71RtemsCanInit(
 	self->m_bus_id = bus_id;
 	self->m_config = device_configuration;
 
-	if (self->m_config->can_interface == mcan_interface_mcan0) {
+	switch (self->m_config->can_interface.kind) {
+	case mcan0_PRESENT:
 		configureMcan0(self);
-	} else if (device_configuration->can_interface ==
-		   mcan_interface_mcan1) {
+		break;
+	case mcan1_PRESENT:
 		configureMcan1(self);
-	} else {
+		break;
+	default:
 		assert(0 &&
 		       "unknown mcan value of can-interface in configuration");
 		return;

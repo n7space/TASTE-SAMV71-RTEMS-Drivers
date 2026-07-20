@@ -19,7 +19,13 @@ const Serial_SamV71_Rtems_Conf_T pohidrv_node_1_uart4 = {
 	.exist = { .transmit_mode = 1 }
 };
 const CAN_Samv71_Rtems_Conf_T pohidrv_node_1_can0 = {
-	.can_interface = mcan_interface_mcan0,
+	.can_interface = {
+		.kind = mcan0_PRESENT,
+		.u.mcan0 = {
+			.rx = CAN_Samv71_Rtems_Interface_T_mcan0_rx_pb3,
+			.tx = CAN_Samv71_Rtems_Interface_T_mcan0_tx_pb2,
+		},
+	},
 	.bit_rate_prescaler = 0UL,
 	.synchronization_jump = 2UL,
 	.time_segments_after_sample_point = 2UL,
@@ -46,7 +52,13 @@ const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart4 = {
 	.exist = { .transmit_mode = 1 }
 };
 const CAN_Samv71_Rtems_Conf_T pohidrv_node_2_can0 = {
-	.can_interface = mcan_interface_mcan0,
+	.can_interface = {
+		.kind = mcan0_PRESENT,
+		.u.mcan0 = {
+			.rx = CAN_Samv71_Rtems_Interface_T_mcan0_rx_pb3,
+			.tx = CAN_Samv71_Rtems_Interface_T_mcan0_tx_pb2,
+		},
+	},
 	.bit_rate_prescaler = 0UL,
 	.synchronization_jump = 2UL,
 	.time_segments_after_sample_point = 2UL,
