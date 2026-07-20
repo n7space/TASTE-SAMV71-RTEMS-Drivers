@@ -828,6 +828,12 @@ exitCriticalSection(samv71_rtems_serial_private_data *const self,
 	self->m_hal_uart.uart.registers->ier = state;
 }
 
+static inline bool
+rawModeEnabled(const samv71_rtems_serial_private_data *const self)
+{
+	return self->m_packetizer_mode.kind == raw_PRESENT;
+}
+
 void Samv71RtemsSerialInit(
 	void *private_data, const enum SystemBus bus_id,
 	const enum SystemDevice device_id,
@@ -848,10 +854,12 @@ void Samv71RtemsSerialInit(
 	initUartRxHandler(self);
 	initUartTxHandler(self);
 
-	Escaper_init(&self->m_escaper, self->m_encoded_packet_buffer,
-		     Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE,
-		     self->m_decoded_packet_buffer,
-		     Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE);
+	if (!rawModeEnabled(self)) {
+		Escaper_init(&self->m_escaper, self->m_encoded_packet_buffer,
+			     Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE,
+			     self->m_decoded_packet_buffer,
+			     Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE);
+	}
 
 	const rtems_task_config taskConfig = {
 		.name = SamV71Core_GenerateNewTaskName(),
@@ -873,12 +881,6 @@ void Samv71RtemsSerialInit(
 		self->m_task, (rtems_task_entry)&Samv71RtemsSerialPoll,
 		(rtems_task_argument)self);
 	assert(taskStartStatus == RTEMS_SUCCESSFUL);
-}
-
-static inline bool
-rawModeEnabled(const samv71_rtems_serial_private_data *const self)
-{
-	return self->m_packetizer_mode.kind == raw_PRESENT;
 }
 
 void Samv71RtemsSerialPoll(rtems_task_argument private_data)
@@ -938,70 +940,79 @@ blockingTxModeEnabled(const samv71_rtems_serial_private_data *const self)
 	return self->m_tx_mode == Serial_SamV71_Rtems_Tx_Mode_T_blocking;
 }
 
+/**
+ * @brief Packet write function signature.
+ *
+ * Used to abstract over blocking vs async TX modes.
+ */
+typedef void (*Samv71RtemsSerial_WritePacketFn)(Samv71RtemsSerial_Uart *const,
+						const uint8_t *const,
+						const uint16_t);
+
+/**
+ * @brief Encode data with Escaper and send each encoded packet.
+ *
+ * Calls writePacket for every encoded packet after running the
+ * Escaper encoder over the full input.
+ */
+static void sendEscapedPackets(samv71_rtems_serial_private_data *const self,
+			       const uint8_t *const data, const size_t length,
+			       Samv71RtemsSerial_WritePacketFn writePacket)
+{
+	Escaper_start_encoder(&self->m_escaper);
+
+	size_t index = 0;
+	while (index < length) {
+		const size_t packetLength = Escaper_encode_packet(
+			&self->m_escaper, data, length, &index);
+
+		writePacket(&self->m_hal_uart, &self->m_encoded_packet_buffer,
+			    packetLength);
+	}
+}
+
+static inline void
+waitForTxSemaphore(samv71_rtems_serial_private_data *const self)
+{
+	const rtems_status_code obtainResult = rtems_semaphore_obtain(
+		self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+	assert(obtainResult == RTEMS_SUCCESSFUL);
+}
+
+/**
+ * @brief Write callback for async TX mode: semaphore wait then DMA send.
+ */
+static void asyncWritePacket(Samv71RtemsSerial_Uart *const halUart,
+			     uint8_t *const buffer, const uint16_t length)
+{
+	const samv71_rtems_serial_private_data *const self =
+		(samv71_rtems_serial_private_data *)halUart->uart.priv;
+
+	waitForTxSemaphore(self);
+	uartWriteAsync(halUart, buffer, length, &self->m_uart_tx_handler);
+}
+
 void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 			   const size_t length)
 {
 	samv71_rtems_serial_private_data *const self =
 		(samv71_rtems_serial_private_data *)private_data;
 
-	if (blockingTxModeEnabled(self)) {
-		// Blocking TX mode: send data synchronously without semaphore
-		if (!rawModeEnabled(self)) {
-			// if raw mode is disabled, start the Escaper's encoder
-			// and use it to process all the data before sending
-			Escaper_start_encoder(&self->m_escaper);
-			size_t index = 0;
-
-			while (index < length) {
-				const size_t packetLength =
-					Escaper_encode_packet(&self->m_escaper,
-							      data, length,
-							      &index);
-
-				uartWriteBlocking(
-					&self->m_hal_uart,
-					(uint8_t *const)&self
-						->m_encoded_packet_buffer,
-					packetLength);
-			}
+	if (!rawModeEnabled(self)) {
+		// Escaped packets mode: encode then send
+		if (blockingTxModeEnabled(self)) {
+			sendEscapedPackets(self, data, length,
+					   uartWriteBlocking);
 		} else {
-			// otherwise skip the encoding and send the data directly
-			uartWriteBlocking(&self->m_hal_uart, data, length);
+			sendEscapedPackets(self, data, length,
+					   asyncWritePacket);
 		}
 	} else {
-		// Async TX mode: use DMA with semaphore synchronization
-		if (!rawModeEnabled(self)) {
-			// if raw mode is disabled, start the Escaper's encoder
-			// and use it to process all the data before sending
-			Escaper_start_encoder(&self->m_escaper);
-
-			while (index < length) {
-				const size_t packetLength =
-					Escaper_encode_packet(&self->m_escaper,
-							      data, length,
-							      &index);
-
-				// wait for completion of previous transfer
-				const rtems_status_code obtainResult =
-					rtems_semaphore_obtain(
-						self->m_tx_semaphore,
-						RTEMS_WAIT, RTEMS_NO_TIMEOUT);
-				assert(obtainResult == RTEMS_SUCCESSFUL);
-
-				uartWriteAsync(
-					&self->m_hal_uart,
-					(uint8_t *const)&self
-						->m_encoded_packet_buffer,
-					packetLength, &self->m_uart_tx_handler);
-			}
+		// Raw mode: send data directly
+		if (blockingTxModeEnabled(self)) {
+			uartWriteBlocking(&self->m_hal_uart, data, length);
 		} else {
-			// otherwise skip the encoding and send the data directly
-			// wait for completion of previous transfer
-			const rtems_status_code obtainResult =
-				rtems_semaphore_obtain(self->m_tx_semaphore,
-						       RTEMS_WAIT,
-						       RTEMS_NO_TIMEOUT);
-			assert(obtainResult == RTEMS_SUCCESSFUL);
+			waitForTxSemaphore(self);
 			uartWriteAsync(&self->m_hal_uart, data, length,
 				       &self->m_uart_tx_handler);
 		}
