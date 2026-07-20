@@ -36,6 +36,7 @@
 #include <Scb/Scb.h>
 #include <Uart/Uart.h>
 #include <Xdmac/xdmad.h>
+#include <Utils/ErrorCode.h>
 
 static Samv71RtemsSerial_UserUartErrorCallback
 	Samv71RtemsSerial_user_uart_error_callback = NULL;
@@ -78,6 +79,10 @@ static Uart *uart4handle;
 #define UART_RX_EVENT RTEMS_EVENT_0
 
 #define XDMAD_NO_POLLING 0
+
+#ifndef UART_BLOCKING_WRITE_TIMEOUT
+#define UART_BLOCKING_WRITE_TIMEOUT 10000
+#endif
 
 void UART0_Handler(void)
 {
@@ -575,7 +580,7 @@ static void initUartTxDMACHannel(Samv71RtemsSerial_Uart *const halUart,
 	}
 }
 
-/** \brief Asynchronously sends bytes over uart.
+/** \brief Asynchronously sends bytes over UART via DMA.
  *
  * \param [in] halUart Hal_Uart structure contains uart device descriptor and
  *                     relevant fifos.
@@ -584,9 +589,9 @@ static void initUartTxDMACHannel(Samv71RtemsSerial_Uart *const halUart,
  * \param [in] txHandler pointer to the handler called after successful array
  *                       transmission
  */
-static void uartWrite(Samv71RtemsSerial_Uart *const halUart,
-		      const uint8_t *const buffer, const uint16_t length,
-		      const Uart_TxHandler *const txHandler)
+static void uartWriteAsync(Samv71RtemsSerial_Uart *const halUart,
+			   const uint8_t *const buffer, const uint16_t length,
+			   const Uart_TxHandler *const txHandler)
 {
 	const uint32_t channelNumber =
 		XDMAD_AllocateChannel(&xdmad, XDMAD_TRANSFER_MEMORY,
@@ -607,6 +612,24 @@ static void uartWrite(Samv71RtemsSerial_Uart *const halUart,
 	} else if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
 		Samv71RtemsSerial_user_xdmad_error_callback(
 			Samv71RtemsSerial_user_xdmad_error_callback_arg);
+	}
+}
+
+/** \brief Sends bytes over UART synchronously.
+ *
+ * \param [in] halUart Hal_Uart structure contains uart device descriptor
+ * \param [in] buffer array containing bytes to send
+ * \param [in] length length of array of bytes
+ */
+static void uartWriteBlocking(Samv71RtemsSerial_Uart *const halUart,
+			      const uint8_t *const buffer,
+			      const uint16_t length)
+{
+	ErrorCode errCode = ErrorCode_NoError;
+	for (uint16_t i = 0; i < length; i++) {
+		Uart_write(halUart->uart, buffer[i],
+			   UART_BLOCKING_WRITE_TIMEOUT, &errCode);
+		assert(errCode == ErrorCode_NoError);
 	}
 }
 
@@ -724,7 +747,8 @@ static void initUartRxHandler(samv71_rtems_serial_private_data *const self)
 		case custom_escape_byte_PRESENT:
 			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
 			self->m_uart_rx_handler.lengthArg = self;
-			self->m_uart_rx_handler.characterCallback = uartRxCallback;
+			self->m_uart_rx_handler.characterCallback =
+				uartRxCallback;
 			self->m_uart_rx_handler.characterArg = self;
 			self->m_uart_rx_handler.targetCharacter =
 				self->m_mode.u.raw.u.custom_escape_byte;
@@ -921,7 +945,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 						       RTEMS_NO_TIMEOUT);
 			assert(obtainResult == RTEMS_SUCCESSFUL);
 
-			uartWrite(
+			uartWriteAsync(
 				&self->m_hal_uart,
 				(uint8_t *const)&self->m_encoded_packet_buffer,
 				packetLength, &self->m_uart_tx_handler);
@@ -932,8 +956,8 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
 		const rtems_status_code obtainResult = rtems_semaphore_obtain(
 			self->m_tx_semaphore, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 		assert(obtainResult == RTEMS_SUCCESSFUL);
-		uartWrite(&self->m_hal_uart, data, length,
-			  &self->m_uart_tx_handler);
+		uartWriteAsync(&self->m_hal_uart, data, length,
+			       &self->m_uart_tx_handler);
 	}
 }
 
