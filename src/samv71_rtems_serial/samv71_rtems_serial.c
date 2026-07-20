@@ -601,6 +601,13 @@ static void uartWriteAsync(Samv71RtemsSerial_Uart *const halUart,
 	    (xdmad.pXdmacs->XDMAC_GTYPE & XDMAC_GTYPE_NB_CH_Msk)) {
 		initUartTxDMACHannel(halUart, buffer, length, txHandler,
 				     channelNumber);
+		// Flush the DMA source buffer from d-cache so the XDMAC sees the
+		// actual data.  Scb_cleanDCacheByAddr requires size to be a multiple
+		// of SCB_CACHE_LINE_SIZE (32 bytes), so round up.
+		const uint32_t alignedLength =
+		    ((length + SCB_CACHE_LINE_SIZE - 1u) / SCB_CACHE_LINE_SIZE)
+		    * SCB_CACHE_LINE_SIZE;
+		Scb_cleanDCacheByAddr(buffer, alignedLength);
 		const eXdmadRC startResult =
 			XDMAD_StartTransfer(&xdmad, channelNumber);
 
