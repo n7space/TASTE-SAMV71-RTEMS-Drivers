@@ -15,7 +15,8 @@ const Serial_SamV71_Rtems_Conf_T pohidrv_node_1_uart4 = {
 		     .u.uart0 = { .tx = pa10, .rx = pa9 } },
 	.speed = b38400,
 	.parity = none,
-	.mode = { .kind = escaped_packets_PRESENT, .u.escaped_packets = FALSE }
+	.packetizer_mode = { .kind = escaped_packets_PRESENT, .u.escaped_packets = FALSE },
+	.tx_mode = asynchronous
 };
 const CAN_Samv71_Rtems_Conf_T pohidrv_node_1_can0 = {
 	.can_interface = {
@@ -47,7 +48,8 @@ const Serial_SamV71_Rtems_Conf_T pohidrv_node_2_uart4 = {
 		     .u.uart0 = { .tx = pa10, .rx = pa9 } },
 	.speed = b38400,
 	.parity = none,
-	.mode = { .kind = escaped_packets_PRESENT, .u.escaped_packets = FALSE }
+	.packetizer_mode = { .kind = escaped_packets_PRESENT, .u.escaped_packets = FALSE },
+	.tx_mode = asynchronous
 };
 const CAN_Samv71_Rtems_Conf_T pohidrv_node_2_can0 = {
 	.can_interface = {
