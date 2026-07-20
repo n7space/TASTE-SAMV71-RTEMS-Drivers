@@ -219,17 +219,17 @@ flag Serial_SamV71_Rtems_Baudrate_T_IsConstraintValid(const Serial_SamV71_Rtems_
 
 void Serial_SamV71_Rtems_Baudrate_T_Initialize(Serial_SamV71_Rtems_Baudrate_T* pVal);
 typedef enum {
-    even = 0,
-    odd = 1,
-    none = 2
+    none = 0,
+    even = 1,
+    odd = 2
 } Serial_SamV71_Rtems_Parity_T;
 
 // please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Parity_T_none none
 #define Serial_SamV71_Rtems_Parity_T_even even
 #define Serial_SamV71_Rtems_Parity_T_odd odd
-#define Serial_SamV71_Rtems_Parity_T_none none
 
-#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T		286  /*even | odd | none*/
+#define ERR_SERIAL_SAMV71_RTEMS_PARITY_T		286  /*none | even | odd*/
 flag Serial_SamV71_Rtems_Parity_T_IsConstraintValid(const Serial_SamV71_Rtems_Parity_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Parity_T_Initialize(Serial_SamV71_Rtems_Parity_T* pVal);
@@ -247,68 +247,83 @@ typedef flag Serial_Samv71_Rtems_Dummy;
 flag Serial_Samv71_Rtems_Dummy_IsConstraintValid(const Serial_Samv71_Rtems_Dummy* pVal, int* pErrCode);
 
 void Serial_Samv71_Rtems_Dummy_Initialize(Serial_Samv71_Rtems_Dummy* pVal);
-/*-- Serial_SamV71_Rtems_Mode_T --------------------------------------------*/
-/*-- Serial_SamV71_Rtems_Mode_T_raw --------------------------------------------*/
+/*-- Serial_SamV71_Rtems_Packetizer_Mode_T --------------------------------------------*/
+/*-- Serial_SamV71_Rtems_Packetizer_Mode_T_raw --------------------------------------------*/
 
 typedef enum {
-    Serial_SamV71_Rtems_Mode_T_raw_NONE,
+    Serial_SamV71_Rtems_Packetizer_Mode_T_raw_NONE,
     single_byte_PRESENT,
     custom_escape_byte_PRESENT
-} Serial_SamV71_Rtems_Mode_T_raw_selection;
+} Serial_SamV71_Rtems_Packetizer_Mode_T_raw_selection;
 
 typedef union {
     Serial_Samv71_Rtems_Dummy single_byte;
     Serial_SamV71_Escape_Byte_T custom_escape_byte;
-} Serial_SamV71_Rtems_Mode_T_raw_unchecked_union;
+} Serial_SamV71_Rtems_Packetizer_Mode_T_raw_unchecked_union;
 
 typedef struct {
-    Serial_SamV71_Rtems_Mode_T_raw_selection kind;
+    Serial_SamV71_Rtems_Packetizer_Mode_T_raw_selection kind;
 
-    Serial_SamV71_Rtems_Mode_T_raw_unchecked_union u;
-} Serial_SamV71_Rtems_Mode_T_raw;
+    Serial_SamV71_Rtems_Packetizer_Mode_T_raw_unchecked_union u;
+} Serial_SamV71_Rtems_Packetizer_Mode_T_raw;
 
 typedef enum {
-    Serial_SamV71_Rtems_Mode_T_NONE,
+    Serial_SamV71_Rtems_Packetizer_Mode_T_NONE,
     escaped_packets_PRESENT,
     raw_PRESENT
-} Serial_SamV71_Rtems_Mode_T_selection;
+} Serial_SamV71_Rtems_Packetizer_Mode_T_selection;
 
 typedef union {
     flag escaped_packets;
-    Serial_SamV71_Rtems_Mode_T_raw raw;
-} Serial_SamV71_Rtems_Mode_T_unchecked_union;
+    Serial_SamV71_Rtems_Packetizer_Mode_T_raw raw;
+} Serial_SamV71_Rtems_Packetizer_Mode_T_unchecked_union;
 
 typedef struct {
-    Serial_SamV71_Rtems_Mode_T_selection kind;
+    Serial_SamV71_Rtems_Packetizer_Mode_T_selection kind;
 
-    Serial_SamV71_Rtems_Mode_T_unchecked_union u;
-} Serial_SamV71_Rtems_Mode_T;
+    Serial_SamV71_Rtems_Packetizer_Mode_T_unchecked_union u;
+} Serial_SamV71_Rtems_Packetizer_Mode_T;
 
-#define ERR_SERIAL_SAMV71_RTEMS_MODE_T_RAW		326  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_MODE_T_RAW_SINGLE_BYTE_2		311  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_MODE_T_RAW_CUSTOM_ESCAPE_BYTE_2		321  /**/
-flag Serial_SamV71_Rtems_Mode_T_raw_IsConstraintValid(const Serial_SamV71_Rtems_Mode_T_raw* pVal, int* pErrCode);
+#define ERR_SERIAL_SAMV71_RTEMS_PACKETIZER_MODE_T_RAW		326  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_PACKETIZER_MODE_T_RAW_SINGLE_BYTE_2		311  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_PACKETIZER_MODE_T_RAW_CUSTOM_ESCAPE_BYTE_2		321  /**/
+flag Serial_SamV71_Rtems_Packetizer_Mode_T_raw_IsConstraintValid(const Serial_SamV71_Rtems_Packetizer_Mode_T_raw* pVal, int* pErrCode);
 
-#define ERR_SERIAL_SAMV71_RTEMS_MODE_T		331  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_MODE_T_ESCAPED_PACKETS		301  /**/
-flag Serial_SamV71_Rtems_Mode_T_IsConstraintValid(const Serial_SamV71_Rtems_Mode_T* pVal, int* pErrCode);
+#define ERR_SERIAL_SAMV71_RTEMS_PACKETIZER_MODE_T		331  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_PACKETIZER_MODE_T_ESCAPED_PACKETS		301  /**/
+flag Serial_SamV71_Rtems_Packetizer_Mode_T_IsConstraintValid(const Serial_SamV71_Rtems_Packetizer_Mode_T* pVal, int* pErrCode);
 
-void Serial_SamV71_Rtems_Mode_T_raw_Initialize(Serial_SamV71_Rtems_Mode_T_raw* pVal);
-void Serial_SamV71_Rtems_Mode_T_Initialize(Serial_SamV71_Rtems_Mode_T* pVal);
+void Serial_SamV71_Rtems_Packetizer_Mode_T_raw_Initialize(Serial_SamV71_Rtems_Packetizer_Mode_T_raw* pVal);
+void Serial_SamV71_Rtems_Packetizer_Mode_T_Initialize(Serial_SamV71_Rtems_Packetizer_Mode_T* pVal);
+typedef enum {
+    asynchronous = 0,
+    blocking = 1
+} Serial_SamV71_Rtems_Tx_Mode_T;
+
+// please use the following macros to avoid breaking code.
+#define Serial_SamV71_Rtems_Tx_Mode_T_asynchronous asynchronous
+#define Serial_SamV71_Rtems_Tx_Mode_T_blocking blocking
+
+#define ERR_SERIAL_SAMV71_RTEMS_TX_MODE_T		336  /*asynchronous | blocking*/
+flag Serial_SamV71_Rtems_Tx_Mode_T_IsConstraintValid(const Serial_SamV71_Rtems_Tx_Mode_T* pVal, int* pErrCode);
+
+void Serial_SamV71_Rtems_Tx_Mode_T_Initialize(Serial_SamV71_Rtems_Tx_Mode_T* pVal);
 /*-- Serial_SamV71_Rtems_Conf_T --------------------------------------------*/
 typedef struct {
     Serial_SamV71_Rtems_Device_T devname;
     Serial_SamV71_Rtems_Baudrate_T speed;
     Serial_SamV71_Rtems_Parity_T parity;
-    Serial_SamV71_Rtems_Mode_T mode;
+    Serial_SamV71_Rtems_Packetizer_Mode_T packetizer_mode;
+    Serial_SamV71_Rtems_Tx_Mode_T tx_mode;
 
 } Serial_SamV71_Rtems_Conf_T;
 
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T		366  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME		336  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2		346  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2		356  /**/
-#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_MODE		361  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T		381  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_DEVNAME		341  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_SPEED_2		351  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PARITY_2		361  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_PACKETIZER_MODE		366  /**/
+#define ERR_SERIAL_SAMV71_RTEMS_CONF_T_TX_MODE_2		376  /**/
 flag Serial_SamV71_Rtems_Conf_T_IsConstraintValid(const Serial_SamV71_Rtems_Conf_T* pVal, int* pErrCode);
 
 void Serial_SamV71_Rtems_Conf_T_Initialize(Serial_SamV71_Rtems_Conf_T* pVal);
