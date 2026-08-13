@@ -1,8 +1,14 @@
 SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
-    CAN-Samv71-Rtems-Interface-T ::= ENUMERATED {
-        mcan-interface-mcan0,
-        mcan-interface-mcan1
+    CAN-Samv71-Rtems-Interface-T ::= CHOICE {
+        mcan0 SEQUENCE {
+            tx ENUMERATED { pb2 },
+            rx ENUMERATED { pb3 }
+        },
+        mcan1 SEQUENCE {
+            tx ENUMERATED { pc14, pd12 },
+            rx ENUMERATED { pc12 }
+        }
     }
 
     CAN-Samv71-Rtems-PCK-Clock-Source ::= ENUMERATED {
@@ -19,8 +25,6 @@ SAMV71-RTEMS-CAN-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
     CAN-Samv71-Rtems-Data-Time-Segment-After-Sample-Point ::= INTEGER (0 .. 15)
 
     CAN-Samv71-Rtems-Data-Bit-Rate-Prescaler ::= INTEGER (0 .. 31)
-
-    CAN-Samv71-Rtems-Data-Structure-T ::= ENUMERATED { plain, can-id-first }
 
     CAN-Samv71-Rtems-Standard-Can-Id ::= INTEGER (0 .. 2047)
 
