@@ -76,7 +76,6 @@ typedef struct __attribute__((aligned(4096))) {
 	enum SystemBus m_bus_id;
 	const CAN_Samv71_Rtems_Conf_T *m_config;
 	Mcan mcan;
-	Pio pioCanTx;
 	rtems_id m_task;
 	RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
 	char m_task_buffer[Can_SAMV71_RTEMS_TASK_BUFFER_SIZE];
