@@ -1,7 +1,7 @@
 /**@file
  * This file is part of the TASTE SAMV71 RTEMS Drivers.
  *
- * @copyright 2025 N7 Space Sp. z o.o.
+ * @copyright 2025-2026 N7 Space Sp. z o.o.
  *
  * Licensed under the ESA Public License (ESA-PL) Permissive (Type 3),
  * Version 2.4 (the "License");
@@ -25,20 +25,30 @@
  * @brief    Internal structures for driver SAMV71 UART
  */
 
+#include <Pio/Pio.h>
+#include <Pmc/Pmc.h>
 #include <Uart/Uart.h>
 
-/// \brief Uart configuration structure
+/// \brief UART configuration structure
 typedef struct {
-	Uart_Id id; /// Uart device identifier (0-4)
+	Uart_Id id; //< Uart device identifier (0-4)
 	Uart_Parity parity; //< used parity bits
-	uint32_t baudrate; ///< chosen baud rate
-} Samv71RtemsSerial_Uart_Config;
+	uint32_t baudrate; //< chosen baud rate
+} Samv71RtemsSerial_UartConfig;
 
-/// \brief uart structure
+/// \brief UART structure
 typedef struct {
 	Uart uart;
 	ByteFifo rxFifo;
 	ByteFifo txFifo;
 } Samv71RtemsSerial_Uart;
+
+// \brief UART pin configuration
+typedef struct {
+	Pio_Port port;
+	Pmc_PeripheralId peripheralId;
+	uint32_t pinMask;
+	Pio_Control control;
+} Samv71RtemsSerial_UartPinConfig;
 
 #endif
