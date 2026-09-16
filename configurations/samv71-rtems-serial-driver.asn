@@ -35,7 +35,10 @@ Serial-Samv71-Rtems-Dummy ::= BOOLEAN
 Serial-SamV71-Rtems-Packetizer-Mode-T    ::= CHOICE {
    escaped-packets BOOLEAN,
    raw CHOICE {
+      -- Single-byte mode: driver passes the received bytes immediately after reception.
       single-byte         Serial-Samv71-Rtems-Dummy,
+      -- Custom escape mode: Driver passes all the received bytes to user application
+      --                     after receiving specified byte.
       custom-escape-byte  Serial-SamV71-Escape-Byte-T
    }
 }
