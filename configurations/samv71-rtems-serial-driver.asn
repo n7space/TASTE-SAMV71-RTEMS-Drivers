@@ -25,7 +25,7 @@ Serial-SamV71-Rtems-Device-T    ::= CHOICE {
 
 Serial-SamV71-Rtems-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b115200, b230400}
 
-Serial-SamV71-Rtems-Parity-T    ::= ENUMERATED {none, even, odd}
+Serial-SamV71-Rtems-Parity-T    ::= ENUMERATED {even, odd, none}
 
 Serial-SamV71-Escape-Byte-T ::= INTEGER(0..255)
 
