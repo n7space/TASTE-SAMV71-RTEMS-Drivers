@@ -35,8 +35,14 @@
 #include <Escaper.h>
 #include <Broker.h>
 
+/* Message RAM layout (in 32-bit words):
+ *   [   0 ..  383] RX FIFO 0  (384 words)
+ *   [ 384 ..  511] TX buffer  (128 words)
+ * Offsets below are word-indices into msgRam[]. */
 #define MSGRAM_SIZE 512
 #define MSGRAM_BYTE_SIZE (MSGRAM_SIZE * sizeof(uint32_t))
+/* log2(MSGRAM_BYTE_SIZE) = log2(2048) = 11;
+ * passed as size exponent to SamRH71Core_DisableDataCacheInRegion(). */
 #define MSGRAM_BYTE_SIZE_EXPONENT 11
 #define MSGRAM_STDID_FILTER_OFFSET 0
 #define MSGRAM_STDID_FILTER_SIZE 0
@@ -84,6 +90,10 @@ typedef struct __attribute__((aligned(4096))) {
 	Escaper m_escaper;
 	uint8_t m_tx_buffer[8];
 	uint8_t m_rx_buffer[8];
+	/* Dual-purpose buffer:
+	 * - m_data: used as the decoded-payload destination for Broker delivery.
+	 * - m_address: used in dynamic-ID mode to prepend the 4-byte CAN frame ID
+	 *   before the payload so the Broker receives [id (4B) | data (nB)]. */
 	union {
 		uint8_t m_data[BROKER_BUFFER_SIZE];
 		uint32_t m_address;
