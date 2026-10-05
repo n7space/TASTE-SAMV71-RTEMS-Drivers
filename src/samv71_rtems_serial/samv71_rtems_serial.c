@@ -605,8 +605,9 @@ static void uartWriteAsync(Samv71RtemsSerial_Uart *const halUart,
 		// actual data.  Scb_cleanDCacheByAddr requires size to be a multiple
 		// of SCB_CACHE_LINE_SIZE (32 bytes), so round up.
 		const uint32_t alignedLength =
-		    ((length + SCB_CACHE_LINE_SIZE - 1u) / SCB_CACHE_LINE_SIZE)
-		    * SCB_CACHE_LINE_SIZE;
+			((length + SCB_CACHE_LINE_SIZE - 1u) /
+			 SCB_CACHE_LINE_SIZE) *
+			SCB_CACHE_LINE_SIZE;
 		Scb_cleanDCacheByAddr(buffer, alignedLength);
 		const eXdmadRC startResult =
 			XDMAD_StartTransfer(&xdmad, channelNumber);
@@ -818,23 +819,6 @@ static void initUartTxHandler(samv71_rtems_serial_private_data *const self)
 	assert(status_code == RTEMS_SUCCESSFUL);
 }
 
-static inline uint32_t
-enterCriticalSection(samv71_rtems_serial_private_data *const self)
-{
-	const uint32_t mask = self->m_hal_uart.uart.registers->imr;
-	self->m_hal_uart.uart.registers->idr = mask;
-	MEMORY_SYNC_BARRIER();
-	return mask;
-}
-
-static inline void
-exitCriticalSection(samv71_rtems_serial_private_data *const self,
-		    const uint32_t state)
-{
-	MEMORY_SYNC_BARRIER();
-	self->m_hal_uart.uart.registers->ier = state;
-}
-
 static inline bool
 rawModeEnabled(const samv71_rtems_serial_private_data *const self)
 {
@@ -912,15 +896,11 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data)
 
 		if (eventStatus == RTEMS_SUCCESSFUL &&
 		    (received_events & UART_RX_EVENT)) {
-			// Extract all the data to a local buffer to make sure the time in
-			// critical section is minimal
-			const uint32_t irqMask = enterCriticalSection(self);
-			size_t length = 0;
-			while (ByteFifo_pull(&self->m_hal_uart.rxFifo,
-					     &self->m_recv_buffer[length])) {
-				length++;
-			}
-			exitCriticalSection(self, irqMask);
+			ByteFifo byteFifo;
+			ByteFifo_init(&byteFifo, self->m_recv_buffer,
+				      Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE);
+			Uart_readRxFifo(&self->m_hal_uart.uart, &byteFifo);
+			const size_t length = ByteFifo_getCount(&byteFifo);
 
 			if (rawModeEnabled(self)) {
 				// if raw mode is enabled, call the Broker directly
@@ -955,8 +935,7 @@ blockingTxModeEnabled(const samv71_rtems_serial_private_data *const self)
  */
 typedef void (*Samv71RtemsSerial_WritePacketFn)(
 	samv71_rtems_serial_private_data *const self,
-	const uint8_t *const buffer,
-	const uint16_t length);
+	const uint8_t *const buffer, const uint16_t length);
 
 /**
  * @brief Encode data with Escaper and send each encoded packet.
@@ -975,8 +954,7 @@ static void sendEscapedPackets(samv71_rtems_serial_private_data *const self,
 		const size_t packetLength = Escaper_encode_packet(
 			&self->m_escaper, data, length, &index);
 
-		writePacket(self, self->m_encoded_packet_buffer,
-			    packetLength);
+		writePacket(self, self->m_encoded_packet_buffer, packetLength);
 	}
 }
 
@@ -995,14 +973,16 @@ static void asyncWritePacket(samv71_rtems_serial_private_data *const self,
 			     const uint8_t *const buffer, const uint16_t length)
 {
 	waitForTxSemaphore(self);
-	uartWriteAsync(&self->m_hal_uart, buffer, length, &self->m_uart_tx_handler);
+	uartWriteAsync(&self->m_hal_uart, buffer, length,
+		       &self->m_uart_tx_handler);
 }
 
 /**
  * @brief Write callback for blocking TX mode: direct register write.
  */
 static void blockingWritePacket(samv71_rtems_serial_private_data *const self,
-				const uint8_t *const buffer, const uint16_t length)
+				const uint8_t *const buffer,
+				const uint16_t length)
 {
 	uartWriteBlocking(&self->m_hal_uart, buffer, length);
 }
