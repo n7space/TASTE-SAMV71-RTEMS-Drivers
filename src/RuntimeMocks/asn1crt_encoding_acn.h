@@ -212,7 +212,7 @@ DEFINE_ACN_DET_ENCODERS(BOOL1, Acn_Enc_Bool_1bit, 1)
 			AcnBitStreamPos cur = Acn_BitStream_GetPos(bs);                       \
 			Acn_BitStream_SetPos(bs, det->pos);                                   \
 			/* Bit-by-bit overwrite: encoder_fn uses AppendPartialByte which   */ \
-			/* clears adjacent bits when crossing a byte boundary — unsafe   */   \
+			/* clears adjacent bits when crossing a byte boundary — unsafe   */ \
 			/* for patching in the middle of a stream. AppendBit is safe.    */   \
 			for (_i = 0; _i < nBits; _i++)                                        \
 				BitStream_AppendBit(                                          \
