@@ -9,9 +9,9 @@ target_sources(SamV71RtemsCan
             ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(SamV71RtemsCan
-  PRIVATE   common_build_options
-  PUBLIC    SAMV71::Runtime::Hal
-            SAMV71::Runtime::Core
+  PRIVATE   drivers_common_build_options
+  PUBLIC    SAMX71::Runtime::Hal
+            SAMX71::Runtime::Core
             TASTE::Broker
             TASTE::Escaper)
 
