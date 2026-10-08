@@ -1,0 +1,42 @@
+name: Workflow
+
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Checkout submodules too (recursively) so tests and build can access them
+        submodules: 'recursive'
+    - name: Install dependencies
+      run: |
+        sudo apt update && sudo apt install -y build-essential cppcheck cmake clang-format curl ninja-build python3-venv
+    - name: Install taste-rtems-qdp-arm
+      run: |
+        curl -s -L https://github.com/n7space/TASTE-RTEMS-QDP-ARM/releases/download/v1.1.0/taste-rtems-qdp-arm.tar.xz | tar -Jxf - -C /opt
+        echo "/opt/taste-rtems-qdp-arm/bin" >> $GITHUB_PATH
+    - name: Install Lizard Cyclomatic Complexity Analyzer
+      run: |
+        python3 -m venv env
+        . env/bin/activate
+        pip install lizard
+    - name: Check code formatting
+      run: |
+        ./clang-format-check.sh check
+    - name: Verify Cyclomatic Complexity
+      # Cyclomatic complexity limit: 10
+      # Line number per function limit: 50
+      run: |
+        ./env/bin/lizard -C 10 -L 50 -l cpp -l c -x src/RuntimeMocks/ src/
+    - name: Build
+      run: |
+        mkdir build-samv
+        cmake -S . -B build-samv -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTOOLS_ENABLE_CPPCHECK=ON -DTASTE_SAMV71_RTEMS_DRIVERS_WARNINGS_AS_ERRORS=ON
+        cmake --build build-samv
