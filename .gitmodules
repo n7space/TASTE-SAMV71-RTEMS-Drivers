@@ -4,3 +4,6 @@
 [submodule "TASTE-Runtime-Common"]
 	path = TASTE-Runtime-Common
 	url = https://github.com/n7space/TASTE-Runtime-Common.git
+[submodule "cmake"]
+	path = cmake
+	url = git@github.com:n7space/cmake-tools.git

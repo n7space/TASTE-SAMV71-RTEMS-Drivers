@@ -515,7 +515,7 @@ static void initUartHardware(Samv71RtemsSerial_Uart *const halUart,
 	Uart_setConfig(&halUart->uart, &config);
 }
 
-static void initUartTxDMACHannel(Samv71RtemsSerial_Uart *const halUart,
+static void initUartTxDMACHannel(const Samv71RtemsSerial_Uart *const halUart,
 				 const uint8_t *const buffer,
 				 const uint16_t length,
 				 const Uart_TxHandler *const txHandler,
