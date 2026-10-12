@@ -87,4 +87,5 @@ set_target_properties(Broker PROPERTIES C_CPPCHECK "" CXX_CPPCHECK "" SKIP_LINTI
 set_target_properties(Escaper PROPERTIES C_CPPCHECK "" CXX_CPPCHECK "" SKIP_LINTING ON)
 set_target_properties(RuntimeCommon PROPERTIES C_CPPCHECK "" CXX_CPPCHECK "" SKIP_LINTING ON)
 
+add_subdirectory(mocks)
 add_subdirectory(src)

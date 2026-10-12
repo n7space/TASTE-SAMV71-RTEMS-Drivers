@@ -4,8 +4,7 @@ target_sources(SamV71RtemsCan
   PUBLIC    samv71_can_generic.h)
 
  target_include_directories(SamV71RtemsCan
-  PUBLIC    ${CMAKE_SOURCE_DIR}/src/RuntimeMocks
-            ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
+  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
             ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(SamV71RtemsCan
@@ -13,7 +12,8 @@ target_link_libraries(SamV71RtemsCan
   PUBLIC    SAMX71::Runtime::Hal
             SAMX71::Runtime::Core
             TASTE::Broker
-            TASTE::Escaper)
+            TASTE::Escaper
+            SAMV71::RuntimeMocks)
 
 add_format_target(SamV71RtemsCan)
 

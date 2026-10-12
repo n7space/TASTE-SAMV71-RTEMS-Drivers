@@ -22,7 +22,7 @@ target_sources(SamV71RuntimeMocks
             system_spec.h)
 
 target_include_directories(SamV71RuntimeMocks
-  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
+  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/mocks
   ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_format_target(SamV71RuntimeMocks)
