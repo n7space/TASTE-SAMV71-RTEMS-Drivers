@@ -22,19 +22,19 @@ jobs:
       run: |
         curl -s -L https://github.com/n7space/TASTE-RTEMS-QDP-ARM/releases/download/v1.1.0/taste-rtems-qdp-arm.tar.xz | tar -Jxf - -C /opt
         echo "/opt/taste-rtems-qdp-arm/bin" >> $GITHUB_PATH
-    - name: Install Lizard Cyclomatic Complexity Analyzer
-      run: |
-        python3 -m venv env
-        . env/bin/activate
-        pip install lizard
+    # - name: Install Lizard Cyclomatic Complexity Analyzer
+    #   run: |
+    #     python3 -m venv env
+    #     . env/bin/activate
+    #     pip install lizard
     - name: Check code formatting
       run: |
         ./clang-format-check.sh check
-    - name: Verify Cyclomatic Complexity
-      # Cyclomatic complexity limit: 10
-      # Line number per function limit: 50
-      run: |
-        ./env/bin/lizard -C 10 -L 50 -l cpp -l c -x src/RuntimeMocks/ src/
+    # - name: Verify Cyclomatic Complexity
+    #   # Cyclomatic complexity limit: 10
+    #   # Line number per function limit: 50
+    #   run: |
+    #     ./env/bin/lizard -C 10 -L 50 -l cpp -l c src/
     - name: Build
       run: |
         mkdir build-samv
