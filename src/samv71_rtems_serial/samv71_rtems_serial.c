@@ -273,6 +273,69 @@ getUartIrqId(const Serial_SamV71_Rtems_Device_T *const device)
 }
 
 static Samv71RtemsSerial_UartPinConfig
+getUart1TxPinConfig(const Serial_SamV71_Rtems_Device_T *const device)
+{
+	switch (device->u.uart1.tx) {
+	case Serial_SamV71_Rtems_Device_T_uart1_tx_pa4:
+		return makeUartPinConfig(Pio_Port_A, Pmc_PeripheralId_PioA,
+					 PIO_PIN_4, Pio_Control_PeripheralC);
+	case Serial_SamV71_Rtems_Device_T_uart1_tx_pa6:
+		return makeUartPinConfig(Pio_Port_A, Pmc_PeripheralId_PioA,
+					 PIO_PIN_6, Pio_Control_PeripheralC);
+	case Serial_SamV71_Rtems_Device_T_uart1_tx_pd26:
+		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
+					 PIO_PIN_26, Pio_Control_PeripheralD);
+	default:
+		// If this branch is hit, then the user provided configuration is invalid,
+		// or something went very wrong and the program will enter invalid state,
+		// so the safest course of action is to assert and abort (if the asserts
+		// are disabled).
+		assert(false && "Unsupported UART1 TX pin");
+		abort();
+	}
+}
+
+static Samv71RtemsSerial_UartPinConfig
+getUart3TxPinConfig(const Serial_SamV71_Rtems_Device_T *const device)
+{
+	switch (device->u.uart3.tx) {
+	case Serial_SamV71_Rtems_Device_T_uart3_tx_pd30:
+		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
+					 PIO_PIN_30, Pio_Control_PeripheralA);
+	case Serial_SamV71_Rtems_Device_T_uart3_tx_pd31:
+		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
+					 PIO_PIN_31, Pio_Control_PeripheralA);
+	default:
+		// If this branch is hit, then the user provided configuration is invalid,
+		// or something went very wrong and the program will enter invalid state,
+		// so the safest course of action is to assert and abort (if the asserts
+		// are disabled).
+		assert(false && "Unsupported UART3 TX pin");
+		abort();
+	}
+}
+
+static Samv71RtemsSerial_UartPinConfig
+getUart4TxPinConfig(const Serial_SamV71_Rtems_Device_T *const device)
+{
+	switch (device->u.uart4.tx) {
+	case Serial_SamV71_Rtems_Device_T_uart4_tx_pd3:
+		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
+					 PIO_PIN_3, Pio_Control_PeripheralC);
+	case Serial_SamV71_Rtems_Device_T_uart4_tx_pd19:
+		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
+					 PIO_PIN_19, Pio_Control_PeripheralC);
+	default:
+		// If this branch is hit, then the user provided configuration is invalid,
+		// or something went very wrong and the program will enter invalid state,
+		// so the safest course of action is to assert and abort (if the asserts
+		// are disabled).
+		assert(false && "Unsupported UART4 TX pin");
+		abort();
+	}
+}
+
+static Samv71RtemsSerial_UartPinConfig
 getUartTxPinConfig(const Serial_SamV71_Rtems_Device_T *const device)
 {
 	switch (device->kind) {
@@ -280,73 +343,14 @@ getUartTxPinConfig(const Serial_SamV71_Rtems_Device_T *const device)
 		return makeUartPinConfig(Pio_Port_A, Pmc_PeripheralId_PioA,
 					 PIO_PIN_10, Pio_Control_PeripheralA);
 	case uart1_PRESENT:
-		switch (device->u.uart1.tx) {
-		case Serial_SamV71_Rtems_Device_T_uart1_tx_pa4:
-			return makeUartPinConfig(Pio_Port_A,
-						 Pmc_PeripheralId_PioA,
-						 PIO_PIN_4,
-						 Pio_Control_PeripheralC);
-		case Serial_SamV71_Rtems_Device_T_uart1_tx_pa6:
-			return makeUartPinConfig(Pio_Port_A,
-						 Pmc_PeripheralId_PioA,
-						 PIO_PIN_6,
-						 Pio_Control_PeripheralC);
-		case Serial_SamV71_Rtems_Device_T_uart1_tx_pd26:
-			return makeUartPinConfig(Pio_Port_D,
-						 Pmc_PeripheralId_PioD,
-						 PIO_PIN_26,
-						 Pio_Control_PeripheralD);
-		default:
-			// If this branch is hit, then the user provided configuration is invalid,
-			// or something went very wrong and the program will enter invalid state,
-			// so the safest course of action is to assert and abort (if the asserts
-			// are disabled).
-			assert(false && "Unsupported UART1 TX pin");
-			abort();
-		}
+		return getUart1TxPinConfig(device);
 	case uart2_PRESENT:
 		return makeUartPinConfig(Pio_Port_D, Pmc_PeripheralId_PioD,
 					 PIO_PIN_26, Pio_Control_PeripheralC);
 	case uart3_PRESENT:
-		switch (device->u.uart3.tx) {
-		case Serial_SamV71_Rtems_Device_T_uart3_tx_pd30:
-			return makeUartPinConfig(Pio_Port_D,
-						 Pmc_PeripheralId_PioD,
-						 PIO_PIN_30,
-						 Pio_Control_PeripheralA);
-		case Serial_SamV71_Rtems_Device_T_uart3_tx_pd31:
-			return makeUartPinConfig(Pio_Port_D,
-						 Pmc_PeripheralId_PioD,
-						 PIO_PIN_31,
-						 Pio_Control_PeripheralA);
-		default:
-			// If this branch is hit, then the user provided configuration is invalid,
-			// or something went very wrong and the program will enter invalid state,
-			// so the safest course of action is to assert and abort (if the asserts
-			// are disabled).
-			assert(false && "Unsupported UART3 TX pin");
-			abort();
-		}
+		return getUart3TxPinConfig(device);
 	case uart4_PRESENT:
-		switch (device->u.uart4.tx) {
-		case Serial_SamV71_Rtems_Device_T_uart4_tx_pd3:
-			return makeUartPinConfig(Pio_Port_D,
-						 Pmc_PeripheralId_PioD,
-						 PIO_PIN_3,
-						 Pio_Control_PeripheralC);
-		case Serial_SamV71_Rtems_Device_T_uart4_tx_pd19:
-			return makeUartPinConfig(Pio_Port_D,
-						 Pmc_PeripheralId_PioD,
-						 PIO_PIN_19,
-						 Pio_Control_PeripheralC);
-		default:
-			// If this branch is hit, then the user provided configuration is invalid,
-			// or something went very wrong and the program will enter invalid state,
-			// so the safest course of action is to assert and abort (if the asserts
-			// are disabled).
-			assert(false && "Unsupported UART4 TX pin");
-			abort();
-		}
+		return getUart4TxPinConfig(device);
 	default:
 		// If this branch is hit, then the user provided configuration is invalid,
 		// or something went very wrong and the program will enter invalid state,
@@ -515,25 +519,11 @@ static void initUartHardware(Samv71RtemsSerial_Uart *const halUart,
 	Uart_setConfig(&halUart->uart, &config);
 }
 
-static void initUartTxDMACHannel(Samv71RtemsSerial_Uart *const halUart,
-				 const uint8_t *const buffer,
+static sXdmadCfg initXdmadConfig(const Samv71RtemsSerial_Uart *const halUart,
 				 const uint16_t length,
-				 const Uart_TxHandler *const txHandler,
-				 uint32_t channelNumber)
+				 const uint8_t *const buffer,
+				 const uint32_t periphID)
 {
-	const eXdmadRC prepareResult =
-		XDMAD_PrepareChannel(&xdmad, channelNumber);
-	if (prepareResult != XDMAD_OK) {
-		if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
-			Samv71RtemsSerial_user_xdmad_error_callback(
-				Samv71RtemsSerial_user_xdmad_error_callback_arg);
-		}
-		return;
-	}
-
-	//< Get Uart Tx peripheral xdmac id
-	const uint32_t periphID = xdmad.XdmaChannels[channelNumber].bDstTxIfID
-				  << XDMAC_CC_PERID_Pos;
 	sXdmadCfg config = {
 		// uBlock max length is equal to uart write max data length. Thus one
 		// uBlock can be used.
@@ -557,6 +547,29 @@ static void initUartTxDMACHannel(Samv71RtemsSerial_Uart *const halUart,
 		.mbr_sus = 0,
 		.mbr_dus = 0,
 	};
+	return config;
+}
+
+static void initUartTxDMACHannel(const Samv71RtemsSerial_Uart *const halUart,
+				 const uint8_t *const buffer,
+				 const uint16_t length,
+				 const Uart_TxHandler *const txHandler,
+				 uint32_t channelNumber)
+{
+	const eXdmadRC prepareResult =
+		XDMAD_PrepareChannel(&xdmad, channelNumber);
+	if (prepareResult != XDMAD_OK) {
+		if (Samv71RtemsSerial_user_xdmad_error_callback != NULL) {
+			Samv71RtemsSerial_user_xdmad_error_callback(
+				Samv71RtemsSerial_user_xdmad_error_callback_arg);
+		}
+		return;
+	}
+
+	//< Get Uart Tx peripheral xdmac id
+	const uint32_t periphID = xdmad.XdmaChannels[channelNumber].bDstTxIfID
+				  << XDMAC_CC_PERID_Pos;
+	sXdmadCfg config = initXdmadConfig(halUart, length, buffer, periphID);
 
 	const eXdmadRC configureResult = XDMAD_ConfigureTransfer(
 		&xdmad, channelNumber, &config, 0, 0,
@@ -741,38 +754,42 @@ static void uartRxCallback(void *private_data)
 	rtems_event_send(self->m_task, UART_RX_EVENT);
 }
 
+static void
+initUartRxHandlerForRawMode(samv71_rtems_serial_private_data *const self)
+{
+	switch (self->m_packetizer_mode.u.raw.kind) {
+	case single_byte_PRESENT:
+		self->m_uart_rx_handler.lengthCallback = uartRxCallback;
+		self->m_uart_rx_handler.lengthArg = self;
+		self->m_uart_rx_handler.characterCallback = NULL;
+		self->m_uart_rx_handler.characterArg = NULL;
+		self->m_uart_rx_handler.targetLength = 1;
+		break;
+	case custom_escape_byte_PRESENT:
+		self->m_uart_rx_handler.lengthCallback = uartRxCallback;
+		self->m_uart_rx_handler.lengthArg = self;
+		self->m_uart_rx_handler.characterCallback = uartRxCallback;
+		self->m_uart_rx_handler.characterArg = self;
+		self->m_uart_rx_handler.targetCharacter =
+			self->m_packetizer_mode.u.raw.u.custom_escape_byte;
+		self->m_uart_rx_handler.targetLength =
+			Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
+		break;
+	default:
+		// If this branch is hit, then the user provided configuration is invalid,
+		// or something went very wrong and the program will enter invalid state, so
+		// the safest course of action is to assert and abort (if the asserts are
+		// disabled).
+		assert(false && "Not supported raw mode kind");
+		abort();
+	}
+}
+
 static void initUartRxHandler(samv71_rtems_serial_private_data *const self)
 {
 	switch (self->m_packetizer_mode.kind) {
 	case raw_PRESENT:
-		switch (self->m_packetizer_mode.u.raw.kind) {
-		case single_byte_PRESENT:
-			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
-			self->m_uart_rx_handler.lengthArg = self;
-			self->m_uart_rx_handler.characterCallback = NULL;
-			self->m_uart_rx_handler.characterArg = NULL;
-			self->m_uart_rx_handler.targetLength = 1;
-			break;
-		case custom_escape_byte_PRESENT:
-			self->m_uart_rx_handler.lengthCallback = uartRxCallback;
-			self->m_uart_rx_handler.lengthArg = self;
-			self->m_uart_rx_handler.characterCallback =
-				uartRxCallback;
-			self->m_uart_rx_handler.characterArg = self;
-			self->m_uart_rx_handler.targetCharacter =
-				self->m_packetizer_mode.u.raw.u
-					.custom_escape_byte;
-			self->m_uart_rx_handler.targetLength =
-				Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE / 2;
-			break;
-		default:
-			// If this branch is hit, then the user provided configuration is invalid,
-			// or something went very wrong and the program will enter invalid state, so
-			// the safest course of action is to assert and abort (if the asserts are
-			// disabled).
-			assert(false && "Not supported raw mode kind");
-			abort();
-		}
+		initUartRxHandlerForRawMode(self);
 		break;
 	case escaped_packets_PRESENT:
 		self->m_uart_rx_handler.lengthCallback = uartRxCallback;

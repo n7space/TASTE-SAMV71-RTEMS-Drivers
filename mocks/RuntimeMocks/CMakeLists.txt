@@ -22,9 +22,10 @@ target_sources(SamV71RuntimeMocks
             system_spec.h)
 
 target_include_directories(SamV71RuntimeMocks
-  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
-            ${CMAKE_CURRENT_SOURCE_DIR})
+  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_format_target(SamV71RuntimeMocks)
+set_target_properties(SamV71RuntimeMocks PROPERTIES C_CPPCHECK "" CXX_CPPCHECK "" SKIP_LINTING ON)
 
 add_library(SAMV71::RuntimeMocks ALIAS SamV71RuntimeMocks)
