@@ -27,6 +27,11 @@
 
 #include <rtems.h>
 
+/* required for cppcheck */
+#ifndef RTEMS_ALIGNED
+#define RTEMS_ALIGNED(_alignment)
+#endif
+
 #include <drivers_config.h>
 #include <system_spec.h>
 #include <Mcan/Mcan.h>

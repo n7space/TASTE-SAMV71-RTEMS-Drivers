@@ -29,6 +29,11 @@
 
 #include <rtems.h>
 
+/* required for cppcheck */
+#ifndef RTEMS_ALIGNED
+#define RTEMS_ALIGNED(_alignment)
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -50,12 +55,12 @@
 #define Serial_SAMV71_RTEMS_UART_TLS_SIZE 512
 #endif
 
-#define Serial_SAMV71_RTEMS_STACK_SIZE                                         \
-  (1024 > RTEMS_MINIMUM_STACK_SIZE ? 1024 : RTEMS_MINIMUM_STACK_SIZE)
-#define Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE                                   \
-  (RTEMS_TASK_STORAGE_SIZE(Serial_SAMV71_RTEMS_STACK_SIZE +                    \
-                               Serial_SAMV71_RTEMS_UART_TLS_SIZE,              \
-                           RTEMS_FLOATING_POINT))
+#define Serial_SAMV71_RTEMS_STACK_SIZE \
+	(1024 > RTEMS_MINIMUM_STACK_SIZE ? 1024 : RTEMS_MINIMUM_STACK_SIZE)
+#define Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE                                \
+	(RTEMS_TASK_STORAGE_SIZE(Serial_SAMV71_RTEMS_STACK_SIZE +           \
+					 Serial_SAMV71_RTEMS_UART_TLS_SIZE, \
+				 RTEMS_FLOATING_POINT))
 
 /**
  * @brief Structure for samv71_rtems_serial driver internal data
@@ -65,31 +70,33 @@
  * from ocarina_components.aadl and has suffix '_private_data'.
  */
 typedef struct {
-  Serial_SamV71_Rtems_Device_T m_device;
-  Samv71RtemsSerial_Uart m_hal_uart;
-  Samv71RtemsSerial_UartConfig m_hal_uart_config;
-  uint8_t m_fifo_memory_block[Serial_SAMV71_RTEMS_FIFO_BUFFER_SIZE];
-  uint8_t m_recv_buffer[Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE];
-  uint8_t m_encoded_packet_buffer[Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE];
-  uint8_t m_decoded_packet_buffer[Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE];
-  Escaper m_escaper;
-  enum SystemBus m_ip_device_bus_id;
-  rtems_id m_task;
-  RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
-  char m_task_buffer[Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE];
-  Uart_RxHandler m_uart_rx_handler;
-  Uart_TxHandler m_uart_tx_handler;
-  Uart_ErrorHandler m_uart_error_handler;
-  rtems_id m_tx_semaphore;
-  Serial_SamV71_Rtems_Packetizer_Mode_T m_packetizer_mode;
-  Serial_SamV71_Rtems_Tx_Mode_T m_tx_mode;
+	Serial_SamV71_Rtems_Device_T m_device;
+	Samv71RtemsSerial_Uart m_hal_uart;
+	Samv71RtemsSerial_UartConfig m_hal_uart_config;
+	uint8_t m_fifo_memory_block[Serial_SAMV71_RTEMS_FIFO_BUFFER_SIZE];
+	uint8_t m_recv_buffer[Serial_SAMV71_RTEMS_RECV_BUFFER_SIZE];
+	uint8_t m_encoded_packet_buffer
+		[Serial_SAMV71_RTEMS_ENCODED_PACKET_MAX_SIZE];
+	uint8_t m_decoded_packet_buffer
+		[Serial_SAMV71_RTEMS_DECODED_PACKET_MAX_SIZE];
+	Escaper m_escaper;
+	enum SystemBus m_ip_device_bus_id;
+	rtems_id m_task;
+	RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
+	char m_task_buffer[Serial_SAMV71_RTEMS_TASK_BUFFER_SIZE];
+	Uart_RxHandler m_uart_rx_handler;
+	Uart_TxHandler m_uart_tx_handler;
+	Uart_ErrorHandler m_uart_error_handler;
+	rtems_id m_tx_semaphore;
+	Serial_SamV71_Rtems_Packetizer_Mode_T m_packetizer_mode;
+	Serial_SamV71_Rtems_Tx_Mode_T m_tx_mode;
 } samv71_rtems_serial_private_data;
 
 /**
  * @brief Function pointer definition for registering uart error callback.
  */
 typedef void (*Samv71RtemsSerial_UserUartErrorCallback)(Uart_ErrorFlags,
-                                                        void *);
+							void *);
 
 /**
  * @brief Function pointer definition for registering xdmad error callback.
@@ -109,10 +116,10 @@ typedef void (*Samv71RtemsSerial_UserXdmadErrorCallback)(void *);
  * @param remote_device_configuration   Configuration of remote device
  */
 void Samv71RtemsSerialInit(
-    void *private_data, const enum SystemBus bus_id,
-    const enum SystemDevice device_id,
-    const Serial_SamV71_Rtems_Conf_T *const device_configuration,
-    const Serial_SamV71_Rtems_Conf_T *const remote_device_configuration);
+	void *private_data, const enum SystemBus bus_id,
+	const enum SystemDevice device_id,
+	const Serial_SamV71_Rtems_Conf_T *const device_configuration,
+	const Serial_SamV71_Rtems_Conf_T *const remote_device_configuration);
 
 /**
  * @brief Function which implements receiving data from remote partition.
@@ -135,7 +142,7 @@ void Samv71RtemsSerialPoll(rtems_task_argument private_data);
  * @param length         The size of the buffer
  */
 void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
-                           const size_t length);
+			   const size_t length);
 
 /**
  * @brief Register callback for uart errors.
@@ -145,7 +152,7 @@ void Samv71RtemsSerialSend(void *private_data, const uint8_t *const data,
  *                       function.
  */
 void Samv71RtemsSerialRegisterUserUartErrorCallback(
-    Samv71RtemsSerial_UserUartErrorCallback callback, void *arg);
+	Samv71RtemsSerial_UserUartErrorCallback callback, void *arg);
 
 /**
  * @brief Register callback for xdmad errors.
@@ -155,6 +162,6 @@ void Samv71RtemsSerialRegisterUserUartErrorCallback(
  *                       function.
  */
 void Samv71RtemsSerialRegisterUserXdmadErrorCallback(
-    Samv71RtemsSerial_UserXdmadErrorCallback callback, void *arg);
+	Samv71RtemsSerial_UserXdmadErrorCallback callback, void *arg);
 
 #endif

@@ -5,17 +5,17 @@ target_sources(SamV71RtemsSerial
             samv71_rtems_serial_internal.h)
 
  target_include_directories(SamV71RtemsSerial
-  PUBLIC    ${CMAKE_SOURCE_DIR}/src/RuntimeMocks
-            ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
+  PUBLIC    ${CMAKE_SOURCE_DIR}/TASTE-SAMX-RTEMS-Runtime/src
             ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(SamV71RtemsSerial
-  PRIVATE   common_build_options
-  PUBLIC    SAMV71::Runtime::Hal
-            SAMV71::Runtime::Core
-            SAMV71::Runtime::Xdmac
+  PRIVATE   drivers_common_build_options
+  PUBLIC    SAMX71::Runtime::Hal
+            SAMX71::Runtime::Core
+            SAMX71::Runtime::Xdmac
             TASTE::Broker
-            TASTE::Escaper)
+            TASTE::Escaper
+            SAMV71::RuntimeMocks)
 
 add_format_target(SamV71RtemsSerial)
 
