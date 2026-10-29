@@ -25,5 +25,5 @@ clang-format --version
 
 for source in $(find ${DIRS} -name \*.cpp -o -name \*.hpp -o -name \*.cc -o -name \*.hh -o -name \*.c -o -name \*.h)
 do
-    clang-format-18 ${FLAGS} "${source}"
+    clang-format ${FLAGS} "${source}"
 done

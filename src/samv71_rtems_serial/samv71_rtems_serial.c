@@ -514,7 +514,7 @@ static void initUartHardware(Samv71RtemsSerial_Uart *const halUart,
 		.parity = halUartConfig.parity,
 		.baudRate = halUartConfig.baudrate,
 		.baudRateClkSrc = Uart_BaudRateClk_PeripheralCk,
-		.baudRateClkFreq = SamV71Core_GetMainClockFrequency()
+		.baudRateClkFreq = SamV71Core_GetMasterClockFrequency()
 	};
 	Uart_setConfig(&halUart->uart, &config);
 }
